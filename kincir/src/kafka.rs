@@ -35,11 +35,11 @@
 //! }
 //! ```
 
-use crate::{Message, router::Logger};
+use crate::{router::Logger, Message};
 use async_trait::async_trait;
 use std::sync::Arc;
-use tokio::sync::mpsc;
 use thiserror::Error;
+use tokio::sync::mpsc;
 
 /// Represents possible errors that can occur in Kafka operations.
 #[derive(Error, Debug)]
@@ -68,11 +68,7 @@ impl KafkaPublisher {
     /// * `_brokers` - List of Kafka broker addresses
     /// * `tx` - Channel sender for messages
     /// * `logger` - Logger implementation
-    pub fn new(
-        _brokers: Vec<String>,
-        tx: mpsc::Sender<Message>,
-        logger: Arc<dyn Logger>,
-    ) -> Self {
+    pub fn new(_brokers: Vec<String>, tx: mpsc::Sender<Message>, logger: Arc<dyn Logger>) -> Self {
         Self { tx, logger }
     }
 }
@@ -83,7 +79,10 @@ impl super::Publisher for KafkaPublisher {
 
     async fn publish(&self, _topic: &str, messages: Vec<Message>) -> Result<(), Self::Error> {
         for message in messages {
-            self.tx.send(message).await.map_err(|_| KafkaError::ChannelSend)?;
+            self.tx
+                .send(message)
+                .await
+                .map_err(|_| KafkaError::ChannelSend)?;
         }
         Ok(())
     }
@@ -112,7 +111,10 @@ impl KafkaSubscriber {
         rx: mpsc::Receiver<Message>,
         logger: Arc<dyn Logger>,
     ) -> Self {
-        Self { rx: Arc::new(tokio::sync::Mutex::new(rx)), logger }
+        Self {
+            rx: Arc::new(tokio::sync::Mutex::new(rx)),
+            logger,
+        }
     }
 }
 
@@ -126,6 +128,8 @@ impl super::Subscriber for KafkaSubscriber {
 
     async fn receive(&self) -> Result<Message, Self::Error> {
         let mut rx = self.rx.lock().await;
-        rx.recv().await.ok_or_else(|| Box::new(KafkaError::ChannelReceive) as Box<dyn std::error::Error + Send + Sync>)
+        rx.recv().await.ok_or_else(|| {
+            Box::new(KafkaError::ChannelReceive) as Box<dyn std::error::Error + Send + Sync>
+        })
     }
 }

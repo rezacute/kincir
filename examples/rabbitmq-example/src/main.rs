@@ -1,6 +1,8 @@
 use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
-use kincir::router::{Router, Logger, StdLogger};
+use kincir::router::{Logger, Router, StdLogger};
 use kincir::Message;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use tokio;
 
@@ -10,18 +12,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let logger = Arc::new(StdLogger::new(true, true));
 
     // Example configuration for RabbitMQ
-    let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672"));
-    let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672", "example-queue"));
+    let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
+    let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
 
     // Define message handler
-    let handler = Arc::new(|msg: Message| {
-        Box::pin(async move {
-            // Example message transformation
-            let mut processed_msg = msg;
-            processed_msg.set_metadata("processed", "true");
-            Ok(vec![processed_msg])
-        })
-    });
+    let handler = Arc::new(
+        |msg: Message| -> Pin<
+            Box<
+                dyn Future<Output = Result<Vec<Message>, Box<dyn std::error::Error + Send + Sync>>>
+                    + Send,
+            >,
+        > {
+            Box::pin(async move {
+                // Example message transformation
+                let processed_msg = msg.with_metadata("processed", "true");
+                Ok(vec![processed_msg])
+            })
+        },
+    );
 
     // Create and run router
     let router = Router::new(

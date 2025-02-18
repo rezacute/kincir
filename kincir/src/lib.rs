@@ -16,6 +16,8 @@
 //! use kincir::router::{Router, Logger, StdLogger};
 //! use kincir::Message;
 //! use std::sync::Arc;
+//! use std::pin::Pin;
+//! use std::future::Future;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -25,9 +27,12 @@
 //!     let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
 //!
 //!     // Create message handler
-//!     let handler = Arc::new(|msg: Message| {
+//!     let handler = Arc::new(|msg: Message| -> Pin<Box<dyn Future<Output = Result<Vec<Message>, Box<dyn std::error::Error + Send + Sync>>> + Send>> {
 //!         Box::pin(async move {
-//!             Ok(vec![msg])
+//!             // Process the message
+//!             let mut processed_msg = msg;
+//!             processed_msg.metadata.insert("processed".to_string(), "true".to_string());
+//!             Ok(vec![processed_msg])
 //!         })
 //!     });
 //!
@@ -134,4 +139,4 @@ pub mod rabbitmq;
 pub mod router;
 
 // Re-export commonly used types
-pub use router::{Logger, StdLogger, Router, HandlerFunc};
+pub use router::{HandlerFunc, Logger, Router, StdLogger};

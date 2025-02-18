@@ -31,9 +31,7 @@ use lapin::types::FieldTable;
 use lapin::{BasicProperties, Connection, ConnectionProperties};
 use serde_json;
 use thiserror::Error;
-use tokio_amqp::*;
-
-/// Represents possible errors that can occur in RabbitMQ operations.
+// Remove unused import
 #[derive(Error, Debug)]
 pub enum RabbitMQError {
     /// Error when interacting with RabbitMQ
@@ -58,12 +56,9 @@ impl RabbitMQPublisher {
     ///
     /// * `uri` - The RabbitMQ connection URI (e.g., "amqp://localhost:5672")
     pub async fn new(uri: &str) -> Result<Self, RabbitMQError> {
-        let connection = Connection::connect(
-            uri,
-            ConnectionProperties::default().with_tokio(),
-        )
-        .await
-        .map_err(RabbitMQError::RabbitMQ)?;
+        let connection = Connection::connect(uri, ConnectionProperties::default())
+            .await
+            .map_err(RabbitMQError::RabbitMQ)?;
 
         Ok(Self { connection })
     }
@@ -71,22 +66,25 @@ impl RabbitMQPublisher {
 
 #[async_trait]
 impl super::Publisher for RabbitMQPublisher {
-    type Error = RabbitMQError;
+    type Error = Box<dyn std::error::Error + Send + Sync>;
 
     async fn publish(&self, topic: &str, messages: Vec<Message>) -> Result<(), Self::Error> {
-        let channel = self.connection.create_channel().await.map_err(RabbitMQError::RabbitMQ)?;
+        let channel = self.connection.create_channel().await.map_err(|e| {
+            Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
+        })?;
 
         channel
-            .queue_declare(
-                topic,
-                QueueDeclareOptions::default(),
-                FieldTable::default(),
-            )
+            .queue_declare(topic, QueueDeclareOptions::default(), FieldTable::default())
             .await
-            .map_err(RabbitMQError::RabbitMQ)?;
+            .map_err(|e| {
+                Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
+            })?;
 
         for message in messages {
-            let payload = serde_json::to_vec(&message)?;
+            let payload = serde_json::to_vec(&message).map_err(|e| {
+                Box::new(RabbitMQError::Serialization(e))
+                    as Box<dyn std::error::Error + Send + Sync>
+            })?;
             let confirm = channel
                 .basic_publish(
                     "",
@@ -96,8 +94,12 @@ impl super::Publisher for RabbitMQPublisher {
                     BasicProperties::default(),
                 )
                 .await
-                .map_err(RabbitMQError::RabbitMQ)?;
-            let _ = confirm.await.map_err(RabbitMQError::RabbitMQ)?;
+                .map_err(|e| {
+                    Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
+                })?;
+            let _ = confirm.await.map_err(|e| {
+                Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
+            })?;
         }
 
         Ok(())
@@ -118,12 +120,9 @@ impl RabbitMQSubscriber {
     ///
     /// * `uri` - The RabbitMQ connection URI (e.g., "amqp://localhost:5672")
     pub async fn new(uri: &str) -> Result<Self, RabbitMQError> {
-        let connection = Connection::connect(
-            uri,
-            ConnectionProperties::default().with_tokio(),
-        )
-        .await
-        .map_err(RabbitMQError::RabbitMQ)?;
+        let connection = Connection::connect(uri, ConnectionProperties::default())
+            .await
+            .map_err(RabbitMQError::RabbitMQ)?;
 
         Ok(Self { connection })
     }
@@ -131,25 +130,27 @@ impl RabbitMQSubscriber {
 
 #[async_trait]
 impl super::Subscriber for RabbitMQSubscriber {
-    type Error = RabbitMQError;
+    type Error = Box<dyn std::error::Error + Send + Sync>;
 
     async fn subscribe(&self, topic: &str) -> Result<(), Self::Error> {
-        let channel = self.connection.create_channel().await.map_err(RabbitMQError::RabbitMQ)?;
+        let channel = self.connection.create_channel().await.map_err(|e| {
+            Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
+        })?;
 
         channel
-            .queue_declare(
-                topic,
-                QueueDeclareOptions::default(),
-                FieldTable::default(),
-            )
+            .queue_declare(topic, QueueDeclareOptions::default(), FieldTable::default())
             .await
-            .map_err(RabbitMQError::RabbitMQ)?;
+            .map_err(|e| {
+                Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
+            })?;
 
         Ok(())
     }
 
     async fn receive(&self) -> Result<Message, Self::Error> {
-        let channel = self.connection.create_channel().await.map_err(RabbitMQError::RabbitMQ)?;
+        let channel = self.connection.create_channel().await.map_err(|e| {
+            Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
+        })?;
 
         let mut consumer = channel
             .basic_consume(
@@ -159,15 +160,28 @@ impl super::Subscriber for RabbitMQSubscriber {
                 FieldTable::default(),
             )
             .await
-            .map_err(RabbitMQError::RabbitMQ)?;
+            .map_err(|e| {
+                Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
+            })?;
 
         if let Some(delivery) = consumer.next().await {
-            let delivery = delivery.map_err(RabbitMQError::RabbitMQ)?;
-            let message: Message = serde_json::from_slice(&delivery.data)?;
-            delivery.ack(Default::default()).await.map_err(RabbitMQError::RabbitMQ)?;
+            let delivery = delivery.map_err(|e| {
+                Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
+            })?;
+            let message: Message = serde_json::from_slice(&delivery.data).map_err(|e| {
+                Box::new(RabbitMQError::Serialization(e))
+                    as Box<dyn std::error::Error + Send + Sync>
+            })?;
+            delivery.ack(Default::default()).await.map_err(|e| {
+                Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
+            })?;
             Ok(message)
         } else {
-            Err(RabbitMQError::RabbitMQ(lapin::Error::InvalidChannelState))
+            Err(
+                Box::new(RabbitMQError::RabbitMQ(lapin::Error::InvalidChannelState(
+                    lapin::ChannelState::Error,
+                ))) as Box<dyn std::error::Error + Send + Sync>,
+            )
         }
     }
 }

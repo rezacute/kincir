@@ -15,11 +15,13 @@
 //! use kincir::Message;
 //! use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
 //! use std::sync::Arc;
+//! use std::pin::Pin;
+//! use std::future::Future;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 //!     let logger = Arc::new(StdLogger::new(true, true));
-//!     let handler = Arc::new(|msg: Message| {
+//!     let handler = Arc::new(|msg: Message| -> Pin<Box<dyn Future<Output = Result<Vec<Message>, Box<dyn std::error::Error + Send + Sync>>> + Send>> {
 //!         Box::pin(async move {
 //!             // Process message here
 //!             Ok(vec![msg])
@@ -45,10 +47,10 @@
 
 use crate::Message;
 use async_trait::async_trait;
-use std::sync::Arc;
+use std::error::Error;
 use std::future::Future;
 use std::pin::Pin;
-use tokio::sync::mpsc;
+use std::sync::Arc;
 
 /// Defines the interface for logging operations in the router.
 #[async_trait]
@@ -103,7 +105,14 @@ impl Logger for StdLogger {
 ///
 /// Handler functions take a message as input and return a Future that resolves to
 /// a Result containing a vector of processed messages or an error.
-pub type HandlerFunc = Arc<dyn Fn(Message) -> Pin<Box<dyn Future<Output = Result<Vec<Message>, Box<dyn std::error::Error + Send + Sync>>> + Send>> + Send + Sync>;
+pub type HandlerFunc = Arc<
+    dyn Fn(
+            Message,
+        ) -> Pin<
+            Box<dyn Future<Output = Result<Vec<Message>, Box<dyn Error + Send + Sync>>> + Send>,
+        > + Send
+        + Sync,
+>;
 
 /// The main router component that manages message flow between topics/queues.
 ///
@@ -116,8 +125,8 @@ pub struct Router {
     logger: Arc<dyn Logger>,
     consume_topic: String,
     publish_topic: String,
-    subscriber: Arc<dyn crate::Subscriber<Error = Box<dyn std::error::Error + Send + Sync>>>,
-    publisher: Arc<dyn crate::Publisher<Error = Box<dyn std::error::Error + Send + Sync>>>,
+    subscriber: Arc<dyn crate::Subscriber<Error = Box<dyn Error + Send + Sync>>>,
+    publisher: Arc<dyn crate::Publisher<Error = Box<dyn Error + Send + Sync>>>,
     handler: HandlerFunc,
 }
 
@@ -136,8 +145,8 @@ impl Router {
         logger: Arc<dyn Logger>,
         consume_topic: String,
         publish_topic: String,
-        subscriber: Arc<dyn crate::Subscriber<Error = Box<dyn std::error::Error + Send + Sync>>>,
-        publisher: Arc<dyn crate::Publisher<Error = Box<dyn std::error::Error + Send + Sync>>>,
+        subscriber: Arc<dyn crate::Subscriber<Error = Box<dyn Error + Send + Sync>>>,
+        publisher: Arc<dyn crate::Publisher<Error = Box<dyn Error + Send + Sync>>>,
         handler: HandlerFunc,
     ) -> Self {
         Self {
@@ -157,7 +166,7 @@ impl Router {
     /// 2. Continuously receive messages
     /// 3. Process messages using the handler
     /// 4. Publish processed messages to the output topic
-    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn run(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
         self.logger.info("Starting router...").await;
         self.subscriber.subscribe(&self.consume_topic).await?;
 
@@ -173,7 +182,7 @@ impl Router {
                             if !processed_msgs.is_empty() {
                                 self.publisher
                                     .publish(&self.publish_topic, processed_msgs)
-                                    .await?;
+                                    .await?
                             }
                         }
                         Err(e) => {
