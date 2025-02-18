@@ -30,6 +30,7 @@ use lapin::options::{BasicConsumeOptions, BasicPublishOptions, QueueDeclareOptio
 use lapin::types::FieldTable;
 use lapin::{BasicProperties, Connection, ConnectionProperties};
 use serde_json;
+use std::sync::Arc;
 use thiserror::Error;
 // Remove unused import
 #[derive(Error, Debug)]
@@ -111,6 +112,8 @@ impl super::Publisher for RabbitMQPublisher {
 /// Uses the lapin library for RabbitMQ communication.
 pub struct RabbitMQSubscriber {
     connection: Connection,
+    topic: Arc<tokio::sync::Mutex<Option<String>>>,
+    consumer: Arc<tokio::sync::Mutex<Option<lapin::Consumer>>>,
 }
 
 impl RabbitMQSubscriber {
@@ -124,7 +127,11 @@ impl RabbitMQSubscriber {
             .await
             .map_err(RabbitMQError::RabbitMQ)?;
 
-        Ok(Self { connection })
+        Ok(Self {
+            connection,
+            topic: Arc::new(tokio::sync::Mutex::new(None)),
+            consumer: Arc::new(tokio::sync::Mutex::new(None)),
+        })
     }
 }
 
@@ -144,25 +151,42 @@ impl super::Subscriber for RabbitMQSubscriber {
                 Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
             })?;
 
+        let mut topic_guard = self.topic.lock().await;
+        *topic_guard = Some(topic.to_string());
+
+        // Create a consumer for the topic
+        let mut consumer_guard = self.consumer.lock().await;
+        *consumer_guard = Some(
+            channel
+                .basic_consume(
+                    topic,
+                    &format!("consumer-{}", uuid::Uuid::new_v4()),
+                    BasicConsumeOptions::default(),
+                    FieldTable::default(),
+                )
+                .await
+                .map_err(|e| {
+                    Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
+                })?,
+        );
+
         Ok(())
     }
 
     async fn receive(&self) -> Result<Message, Self::Error> {
-        let channel = self.connection.create_channel().await.map_err(|e| {
-            Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
+        let topic_guard = self.topic.lock().await;
+        let _topic = topic_guard.as_ref().ok_or_else(|| {
+            Box::new(RabbitMQError::RabbitMQ(lapin::Error::InvalidChannelState(
+                lapin::ChannelState::Error,
+            ))) as Box<dyn std::error::Error + Send + Sync>
         })?;
 
-        let mut consumer = channel
-            .basic_consume(
-                "",
-                "",
-                BasicConsumeOptions::default(),
-                FieldTable::default(),
-            )
-            .await
-            .map_err(|e| {
-                Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
-            })?;
+        let mut consumer_guard = self.consumer.lock().await;
+        let consumer = consumer_guard.as_mut().ok_or_else(|| {
+            Box::new(RabbitMQError::RabbitMQ(lapin::Error::InvalidChannelState(
+                lapin::ChannelState::Error,
+            ))) as Box<dyn std::error::Error + Send + Sync>
+        })?;
 
         if let Some(delivery) = consumer.next().await {
             let delivery = delivery.map_err(|e| {
