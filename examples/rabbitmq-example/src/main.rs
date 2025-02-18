@@ -1,10 +1,7 @@
 use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
-use kincir::router::{Logger, Router, StdLogger};
-use kincir::Message;
-use std::future::Future;
-use std::pin::Pin;
+use kincir::router::StdLogger;
+use kincir::{Message, HandlerFunc, Router};
 use std::sync::Arc;
-use tokio;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -16,13 +13,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
 
     // Define message handler
-    let handler = Arc::new(
-        |msg: Message| -> Pin<
-            Box<
-                dyn Future<Output = Result<Vec<Message>, Box<dyn std::error::Error + Send + Sync>>>
-                    + Send,
-            >,
-        > {
+    let handler: HandlerFunc = Arc::new(
+        |msg: Message| {
             Box::pin(async move {
                 // Example message transformation
                 let processed_msg = msg.with_metadata("processed", "true");

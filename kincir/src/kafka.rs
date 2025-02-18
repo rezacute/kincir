@@ -78,12 +78,14 @@ impl super::Publisher for KafkaPublisher {
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
     async fn publish(&self, _topic: &str, messages: Vec<Message>) -> Result<(), Self::Error> {
+        self.logger.info(&format!("Publishing {} messages to topic {}", messages.len(), _topic)).await;
         for message in messages {
             self.tx
                 .send(message)
                 .await
                 .map_err(|_| KafkaError::ChannelSend)?;
         }
+        self.logger.info(&format!("Successfully published messages to topic {}", _topic)).await;
         Ok(())
     }
 }
@@ -123,13 +125,19 @@ impl super::Subscriber for KafkaSubscriber {
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
     async fn subscribe(&self, _topic: &str) -> Result<(), Self::Error> {
+        self.logger.info(&format!("Subscribing to topic {}", _topic)).await;
         Ok(())
     }
 
     async fn receive(&self) -> Result<Message, Self::Error> {
         let mut rx = self.rx.lock().await;
-        rx.recv().await.ok_or_else(|| {
+        let result = rx.recv().await.ok_or_else(|| {
             Box::new(KafkaError::ChannelReceive) as Box<dyn std::error::Error + Send + Sync>
-        })
+        });
+        match &result {
+            Ok(_) => { self.logger.info("Received message from channel").await; }
+            Err(e) => { self.logger.error(&format!("Error receiving message: {}", e)).await; }
+        }
+        result
     }
 }
