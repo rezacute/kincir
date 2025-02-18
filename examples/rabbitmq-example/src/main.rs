@@ -1,6 +1,6 @@
 use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
 use kincir::router::StdLogger;
-use kincir::{Message, HandlerFunc, Router};
+use kincir::{HandlerFunc, Message, Router};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -13,15 +13,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
 
     // Define message handler
-    let handler: HandlerFunc = Arc::new(
-        |msg: Message| {
-            Box::pin(async move {
-                // Example message transformation
-                let processed_msg = msg.with_metadata("processed", "true");
-                Ok(vec![processed_msg])
-            })
-        },
-    );
+    let handler: HandlerFunc = Arc::new(|msg: Message| {
+        Box::pin(async move {
+            // Example message transformation
+            let processed_msg = msg.with_metadata("processed", "true");
+            Ok(vec![processed_msg])
+        })
+    });
 
     // Create and run router
     let router = Router::new(

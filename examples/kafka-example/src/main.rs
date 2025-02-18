@@ -1,6 +1,6 @@
 use kincir::kafka::{KafkaPublisher, KafkaSubscriber};
 use kincir::router::StdLogger;
-use kincir::{Message, HandlerFunc, Router};
+use kincir::{HandlerFunc, Message, Router};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
@@ -27,15 +27,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     ));
 
     // Define message handler
-    let handler: HandlerFunc = Arc::new(
-        |msg: Message| {
-            Box::pin(async move {
-                // Example message transformation
-                let processed_msg = msg.with_metadata("processed", "true");
-                Ok(vec![processed_msg])
-            })
-        },
-    );
+    let handler: HandlerFunc = Arc::new(|msg: Message| {
+        Box::pin(async move {
+            // Example message transformation
+            let processed_msg = msg.with_metadata("processed", "true");
+            Ok(vec![processed_msg])
+        })
+    });
 
     // Create and run router
     let router = Router::new(
