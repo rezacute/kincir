@@ -21,5 +21,5 @@ fn test_message_metadata() {
         Some(&"text/plain".to_string())
     );
     assert_eq!(message.metadata.get("priority"), Some(&"high".to_string()));
-    assert!(message.metadata.get("non-existent").is_none());
+    assert!(!message.metadata.contains_key("non-existent"));
 }
