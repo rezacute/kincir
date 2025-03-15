@@ -1,88 +1,99 @@
 # Kincir
 
-Kincir is a unified message streaming library for Rust that provides a consistent interface for working with multiple message broker backends. It simplifies the process of building message-driven applications by offering a clean, unified API across different messaging systems.
+[![Crates.io](https://img.shields.io/crates/v/kincir.svg)](https://crates.io/crates/kincir)
+[![Documentation](https://docs.rs/kincir/badge.svg)](https://docs.rs/kincir)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
+Kincir is a Rust library that provides a unified interface for message streaming with support for multiple message broker backends. It offers a simple, consistent API for publishing and subscribing to messages across different messaging systems, with advanced routing capabilities.
 
 ## Features
 
-- Unified API for publishing and subscribing to messages
-- Support for multiple message broker backends:
-  - Apache Kafka
-  - RabbitMQ
+- Unified messaging interface with support for multiple backends (Kafka, RabbitMQ)
 - Message routing with customizable handlers
-- Built-in logging capabilities
-- Message tracking with UUID generation
-- Extensible message metadata
+- Built-in logging support
+- Message UUID generation for tracking and identification
+- Customizable message metadata support
+- Async/await support
+- Type-safe error handling
 
 ## Installation
 
-Add this to your `Cargo.toml`:
+Add kincir to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-kincir = "0.1.0"
+kincir = "0.1.3"
 ```
 
-## Quick Start
+## Build and Development
 
-### Using with Kafka
+### Using Make
+
+The project includes a Makefile to simplify common development tasks:
+
+```bash
+# Build the project
+make build
+
+# Run tests
+make test
+
+# Format code and run linters
+make verify
+
+# Generate documentation
+make docs
+
+# Run benchmarks
+make bench
+
+# Show all available commands
+make help
+```
+
+### Using Docker
+
+The project includes Docker support for development and testing:
+
+```bash
+# Start the Docker environment
+./scripts/docker_env.sh start
+
+# Run the Kafka example
+./scripts/docker_env.sh kafka
+
+# Run the RabbitMQ example
+./scripts/docker_env.sh rabbitmq
+
+# Show all available commands
+./scripts/docker_env.sh help
+```
+
+For more details on Docker usage, see [README.docker.md](README.docker.md).
+
+## Usage
+
+### Basic Message Creation
 
 ```rust
-use kincir::kafka::{KafkaPublisher, KafkaSubscriber};
-use kincir::router::StdLogger;
-use kincir::{HandlerFunc, Message, Router};
-use std::sync::Arc;
-use tokio::sync::mpsc;
+use kincir::Message;
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // Initialize logger
-    let logger = Arc::new(StdLogger::new(true, true));
+// Create a new message with payload
+let payload = b"Hello, World!".to_vec();
+let message = Message::new(payload);
 
-    // Set up channels for Kafka communication
-    let (tx, rx) = mpsc::channel(100);
-
-    // Configure Kafka components
-    let publisher = Arc::new(KafkaPublisher::new(
-        vec!["localhost:9092".to_string()],
-        tx,
-        logger.clone(),
-    ));
-
-    let subscriber = Arc::new(KafkaSubscriber::new(
-        vec!["localhost:9092".to_string()],
-        "example-group".to_string(),
-        rx,
-        logger.clone(),
-    ));
-
-    // Define message handler
-    let handler: HandlerFunc = Arc::new(|msg: Message| {
-        Box::pin(async move {
-            let processed_msg = msg.with_metadata("processed", "true");
-            Ok(vec![processed_msg])
-        })
-    });
-
-    // Create and run router
-    let router = Router::new(
-        logger,
-        "input-topic".to_string(),
-        "output-topic".to_string(),
-        subscriber,
-        publisher,
-        handler,
-    );
-
-    router.run().await
-}
+// Add metadata to the message
+let message = message.with_metadata("content-type", "text/plain");
 ```
 
-### Using with RabbitMQ
+### Setting Up a Message Router
+
+The Router is a central component that handles message flow between publishers and subscribers:
 
 ```rust
 use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
-use kincir::router::StdLogger;
-use kincir::{HandlerFunc, Message, Router};
+use kincir::router::{Router, Logger, StdLogger};
+use kincir::Message;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -90,14 +101,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Initialize logger
     let logger = Arc::new(StdLogger::new(true, true));
 
-    // Configure RabbitMQ components
-    let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
-    let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
+    // Configure message brokers
+    let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672"));
+    let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672", "my-queue"));
 
     // Define message handler
-    let handler: HandlerFunc = Arc::new(|msg: Message| {
+    let handler = Arc::new(|msg: Message| {
         Box::pin(async move {
-            let processed_msg = msg.with_metadata("processed", "true");
+            // Process the message
+            let mut processed_msg = msg;
+            processed_msg.set_metadata("processed", "true");
             Ok(vec![processed_msg])
         })
     });
@@ -116,29 +129,119 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 }
 ```
 
-## Core Components
+### Publishing Messages
 
-### Message
+```rust
+use kincir::Publisher;
 
-The `Message` struct represents a message in the system with:
-- Unique UUID
-- Payload as bytes
-- Extensible metadata
+// Create messages to publish
+let messages = vec![Message::new(b"Message 1".to_vec()), Message::new(b"Message 2".to_vec())];
 
-### Router
+// Publish messages to a topic
+async fn publish_example<P: Publisher>(publisher: &P) -> Result<(), P::Error> {
+    publisher.publish("my-topic", messages).await
+}
+```
 
-The `Router` is the central component that:
-- Subscribes to input topics
-- Processes messages using provided handlers
-- Publishes processed messages to output topics
-- Handles logging and error management
+### Subscribing to Messages
 
-### Publisher/Subscriber
+```rust
+use kincir::Subscriber;
 
-Traits that define the interface for message broker implementations:
-- `Publisher`: For sending messages to topics
-- `Subscriber`: For receiving messages from topics
+// Subscribe and receive messages
+async fn subscribe_example<S: Subscriber>(subscriber: &S) -> Result<(), S::Error> {
+    // Subscribe to a topic
+    subscriber.subscribe("my-topic").await?;
+    
+    // Receive messages
+    loop {
+        let message = subscriber.receive().await?;
+        println!("Received message: {:?}", message);
+    }
+}
+```
 
-## License
+## Backend Implementations
 
-This project is licensed under the MIT License.
+### Kafka
+
+Kincir provides Kafka support through the `kafka` module:
+
+```rust
+use kincir::kafka::{KafkaPublisher, KafkaSubscriber};
+
+// Configure Kafka publisher
+let publisher = KafkaPublisher::new("localhost:9092");
+
+// Configure Kafka subscriber
+let subscriber = KafkaSubscriber::new("localhost:9092", "consumer-group-id");
+```
+
+### RabbitMQ
+
+RabbitMQ support is available through the `rabbitmq` module:
+
+```rust
+use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
+
+// Configure RabbitMQ publisher
+let publisher = RabbitMQPublisher::new("amqp://localhost:5672");
+
+// Configure RabbitMQ subscriber
+let subscriber = RabbitMQSubscriber::new("amqp://localhost:5672", "my-queue");
+```
+
+## Message Structure
+
+Each message in Kincir consists of:
+
+- `uuid`: A unique identifier for the message
+- `payload`: The actual message content as a byte vector
+- `metadata`: A hash map of string key-value pairs for additional message information
+
+## Message Handler
+
+Message handlers are async functions that process incoming messages and can produce zero or more output messages:
+
+```rust
+use kincir::Message;
+
+// Define a message handler
+let handler = |msg: Message| {
+    Box::pin(async move {
+        // Process the message
+        let mut processed_msg = msg;
+        processed_msg.set_metadata("processed", "true");
+        Ok(vec![processed_msg])
+    })
+};
+```
+
+## Roadmap to v1.0 🚀  
+
+Kincir is evolving towards **feature parity with Watermill (Golang)** while leveraging Rust's performance and safety. Below is our roadmap:
+
+### ✅ **v0.2 – Core Enhancements**  
+- In-memory message broker for local testing  
+- Unified Ack/Nack handling across backends  
+- Correlation ID tracking for tracing  
+- Performance profiling and initial benchmarks  
+- Unit & integration tests for stability  
+
+### 🔄 **v0.3 – Middleware & Backend Expansion**  
+- Middleware framework: logging, retry, recovery, correlation  
+- Additional broker support (e.g., NATS, AWS SQS)  
+- Optimized async pipeline for lower latency  
+- Integration tests for middleware + new backends  
+
+### 📊 **v0.4 – Distributed Tracing & Monitoring**  
+- OpenTelemetry-based tracing for message flows  
+- Prometheus metrics for message processing  
+- Poison queue (dead-letter handling)  
+- Throttling & backpressure support  
+- Stress testing and performance benchmarking  
+
+### 🛠 **v0.5 – Hardening & API Freeze**  
+- API finalization for stability  
+- Cross-platform testing (Linux, macOS, Windows)  
+- Memory optimization and async efficiency improvements
