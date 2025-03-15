@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  # Kincir application
+  kincir:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - kafka
+      - rabbitmq
+    environment:
+      - RUST_LOG=info
+    networks:
+      - kincir-network
+    # By default, the container will run the CMD from the Dockerfile
+    # To run a specific example, override the command:
+    # command: ./kafka-example
+    # or
+    # command: ./rabbitmq-example
+
+  # Kafka and Zookeeper services
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - kincir-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    hostname: kafka
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - kincir-network
+
+  # RabbitMQ service
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    hostname: rabbitmq
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"  # AMQP port
+      - "15672:15672"  # Management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - kincir-network
+
+  # Kafka example service
+  kafka-example:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ./kafka-example
+    depends_on:
+      - kafka
+    environment:
+      - RUST_LOG=info
+    networks:
+      - kincir-network
+    profiles:
+      - kafka-demo
+
+  # RabbitMQ example service
+  rabbitmq-example:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ./rabbitmq-example
+    depends_on:
+      - rabbitmq
+    environment:
+      - RUST_LOG=info
+    networks:
+      - kincir-network
+    profiles:
+      - rabbitmq-demo
+
+networks:
+  kincir-network:
+    driver: bridge 

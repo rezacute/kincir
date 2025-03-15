@@ -1,0 +1,21 @@
+# Git
+.git
+.gitignore
+
+# Rust build artifacts
+target/
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Misc
+.DS_Store
+*.log 

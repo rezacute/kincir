@@ -25,6 +25,52 @@ Add kincir to your `Cargo.toml`:
 kincir = "0.1.0"
 ```
 
+## Build and Development
+
+### Using Make
+
+The project includes a Makefile to simplify common development tasks:
+
+```bash
+# Build the project
+make build
+
+# Run tests
+make test
+
+# Format code and run linters
+make verify
+
+# Generate documentation
+make docs
+
+# Run benchmarks
+make bench
+
+# Show all available commands
+make help
+```
+
+### Using Docker
+
+The project includes Docker support for development and testing:
+
+```bash
+# Start the Docker environment
+./scripts/docker_env.sh start
+
+# Run the Kafka example
+./scripts/docker_env.sh kafka
+
+# Run the RabbitMQ example
+./scripts/docker_env.sh rabbitmq
+
+# Show all available commands
+./scripts/docker_env.sh help
+```
+
+For more details on Docker usage, see [README.docker.md](README.docker.md).
+
 ## Usage
 
 ### Basic Message Creation
@@ -176,7 +222,7 @@ Here's a **short and concise roadmap** for Kincir to be displayed in the README 
 
 ## Roadmap to v1.0 🚀  
 
-Kincir is evolving towards **feature parity with Watermill (Golang)** while leveraging Rust’s performance and safety. Below is our roadmap:
+Kincir is evolving towards **feature parity with Watermill (Golang)** while leveraging Rust's performance and safety. Below is our roadmap:
 
 ### ✅ **v0.2 – Core Enhancements**  
 - In-memory message broker for local testing  

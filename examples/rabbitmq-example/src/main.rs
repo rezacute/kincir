@@ -8,9 +8,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Initialize logger
     let logger = Arc::new(StdLogger::new(true, true));
 
+    // Get RabbitMQ connection string from environment variable or use default
+    let rabbitmq_url = std::env::var("RABBITMQ_URL")
+        .unwrap_or_else(|_| "amqp://guest:guest@rabbitmq:5672".to_string());
+
     // Example configuration for RabbitMQ
-    let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
-    let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
+    let publisher = Arc::new(RabbitMQPublisher::new(&rabbitmq_url).await?);
+    let subscriber = Arc::new(RabbitMQSubscriber::new(&rabbitmq_url).await?);
 
     // Define message handler
     let handler: HandlerFunc = Arc::new(|msg: Message| {

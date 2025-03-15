@@ -12,15 +12,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Set up channels for Kafka communication
     let (tx, rx) = mpsc::channel(100);
 
+    // Get Kafka broker address from environment variable or use default
+    let kafka_broker = std::env::var("KAFKA_BROKER").unwrap_or_else(|_| "kafka:9092".to_string());
+
     // Example configuration for Kafka
     let publisher = Arc::new(KafkaPublisher::new(
-        vec!["localhost:9092".to_string()],
+        vec![kafka_broker.clone()],
         tx,
         logger.clone(),
     ));
 
     let subscriber = Arc::new(KafkaSubscriber::new(
-        vec!["localhost:9092".to_string()],
+        vec![kafka_broker],
         "example-group".to_string(),
         rx,
         logger.clone(),
