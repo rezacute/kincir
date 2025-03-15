@@ -27,9 +27,8 @@ fn bench_message_with_metadata(c: &mut Criterion) {
 // Benchmark message serialization
 fn bench_message_serialization(c: &mut Criterion) {
     let payload = b"Hello, World!".to_vec();
-    let message = Message::new(payload)
-        .with_metadata("content-type", "text/plain");
-    
+    let message = Message::new(payload).with_metadata("content-type", "text/plain");
+
     c.bench_function("message_serialization", |b| {
         b.iter(|| {
             let _serialized = bincode::serialize(&message).unwrap();
@@ -40,10 +39,9 @@ fn bench_message_serialization(c: &mut Criterion) {
 // Benchmark message deserialization
 fn bench_message_deserialization(c: &mut Criterion) {
     let payload = b"Hello, World!".to_vec();
-    let message = Message::new(payload)
-        .with_metadata("content-type", "text/plain");
+    let message = Message::new(payload).with_metadata("content-type", "text/plain");
     let serialized = bincode::serialize(&message).unwrap();
-    
+
     c.bench_function("message_deserialization", |b| {
         b.iter(|| {
             let _deserialized: Message = bincode::deserialize(&serialized).unwrap();
@@ -62,7 +60,7 @@ fn configure_benchmarks() -> Criterion {
 criterion_group! {
     name = benches;
     config = configure_benchmarks();
-    targets = bench_message_creation, bench_message_with_metadata, 
+    targets = bench_message_creation, bench_message_with_metadata,
               bench_message_serialization, bench_message_deserialization
 }
-criterion_main!(benches); 
+criterion_main!(benches);
