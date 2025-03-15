@@ -170,6 +170,49 @@ let handler = |msg: Message| {
     })
 };
 ```
+Here's a **short and concise roadmap** for Kincir to be displayed in the README file:
+
+---
+
+## Roadmap to v1.0 🚀  
+
+Kincir is evolving towards **feature parity with Watermill (Golang)** while leveraging Rust’s performance and safety. Below is our roadmap:
+
+### ✅ **v0.2 – Core Enhancements**  
+- In-memory message broker for local testing  
+- Unified Ack/Nack handling across backends  
+- Correlation ID tracking for tracing  
+- Performance profiling and initial benchmarks  
+- Unit & integration tests for stability  
+
+### 🔄 **v0.3 – Middleware & Backend Expansion**  
+- Middleware framework: logging, retry, recovery, correlation  
+- Additional broker support (e.g., NATS, AWS SQS)  
+- Optimized async pipeline for lower latency  
+- Integration tests for middleware + new backends  
+
+### 📊 **v0.4 – Distributed Tracing & Monitoring**  
+- OpenTelemetry-based tracing for message flows  
+- Prometheus metrics for message processing  
+- Poison queue (dead-letter handling)  
+- Throttling & backpressure support  
+- Stress testing and performance benchmarking  
+
+### 🛠 **v0.5 – Hardening & API Freeze**  
+- API finalization for stability  
+- Cross-platform testing (Linux, macOS, Windows)  
+- Memory optimization and async efficiency improvements  
+- Comprehensive documentation and migration guide  
+
+### 🚀 **v1.0 – Production-Ready Release**  
+- High-performance, production-ready messaging library  
+- Fully stable API with semantic versioning  
+- Complete Watermill feature parity (middleware, observability, routing)  
+- Extensive test coverage and robust CI/CD pipeline  
+- Community engagement and ecosystem expansion  
+
+For more details, visit [our roadmap](https://github.com/rezacute/kincir/projects) or contribute to the discussion!  
+
 
 ## Contributing
 
