@@ -6,6 +6,8 @@
 
 Kincir is a Rust library that provides a unified interface for message streaming with support for multiple message broker backends. It offers a simple, consistent API for publishing and subscribing to messages across different messaging systems, with advanced routing capabilities.
 
+**[📚 Online Documentation](https://rezacute.github.io/kincir/) | [🦀 Crates.io](https://crates.io/crates/kincir) | [💻 GitHub Repository](https://github.com/rezacute/kincir)**
+
 ## Features
 
 - Unified messaging interface with support for multiple backends (Kafka, RabbitMQ)
