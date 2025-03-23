@@ -6,7 +6,7 @@ fn main() {
     let original_message = Message::new(b"Hello, Protocol Buffers!".to_vec())
         .with_metadata("content-type", "text/plain")
         .with_metadata("priority", "high")
-        .with_metadata("timestamp", &chrono::Utc::now().to_rfc3339());
+        .with_metadata("timestamp", chrono::Utc::now().to_rfc3339());
 
     println!("Original message:");
     println!("  UUID: {}", original_message.uuid);

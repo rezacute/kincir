@@ -54,8 +54,14 @@ pub trait MessageCodec {
 /// Uses Protocol Buffers for message serialization and deserialization.
 pub struct ProtobufCodec;
 
+impl Default for ProtobufCodec {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// The Protocol Buffer representation of a Message.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Default)]
 pub struct ProtoMessage {
     /// Unique identifier for the message
     pub uuid: String,
@@ -66,7 +72,7 @@ pub struct ProtoMessage {
 }
 
 /// A single key-value entry in the message metadata.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Default)]
 pub struct MetadataEntry {
     /// The key of the metadata entry
     pub key: String,
@@ -131,16 +137,6 @@ impl ProstMessage for ProtoMessage {
     }
 }
 
-impl Default for ProtoMessage {
-    fn default() -> Self {
-        Self {
-            uuid: String::new(),
-            payload: Vec::new(),
-            metadata: Vec::new(),
-        }
-    }
-}
-
 impl ProstMessage for MetadataEntry {
     fn encode_raw<B>(&self, buf: &mut B)
     where
@@ -178,15 +174,6 @@ impl ProstMessage for MetadataEntry {
     fn clear(&mut self) {
         self.key.clear();
         self.value.clear();
-    }
-}
-
-impl Default for MetadataEntry {
-    fn default() -> Self {
-        Self {
-            key: String::new(),
-            value: String::new(),
-        }
     }
 }
 

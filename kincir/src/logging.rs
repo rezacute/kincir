@@ -86,6 +86,12 @@ impl NoOpLogger {
     }
 }
 
+impl Default for NoOpLogger {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait]
 impl Logger for NoOpLogger {
     async fn info(&self, _msg: &str) {
