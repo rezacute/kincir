@@ -1,0 +1,33 @@
+title: Kincir
+description: Building event-driven applications the easy way in Rust.
+baseurl: "/kincir"
+url: "https://rezacute.github.io"
+
+# Theme settings
+theme: jekyll-theme-cayman
+show_downloads: true
+github:
+  repository_url: https://github.com/rezacute/kincir
+  is_project_page: true
+  owner_url: https://github.com/rezacute
+  owner_name: Rezacute
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Exclude these files from the build
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  - README.md.bak
+  - CHANGELOG.md
+  - LICENSE 

@@ -1,36 +1,7 @@
 source "https://rubygems.org"
 
-# Use the same Jekyll version as GitHub Pages
-gem "jekyll", "~> 3.9.3"
-
-# This is the default theme for new Jekyll sites.
-gem "minima", "~> 2.5"
-
-# Jekyll plugins
-group :jekyll_plugins do
-  gem "jekyll-seo-tag", "~> 2.7.1"
-  gem "jekyll-sitemap", "~> 1.4.0"
-  gem "jekyll-feed", "~> 0.15.1"
-  gem "jekyll-github-metadata", "~> 2.13.0"
-  # Required for Jekyll 3.9.x with GitHub Pages
-  gem "kramdown-parser-gfm", "~> 1.1.0"
-end
-
-# Windows and JRuby does not include zoneinfo files, so bundle the tzinfo-data gem
-# and associated library.
-platforms :mingw, :x64_mingw, :mswin, :jruby do
-  gem "tzinfo", "~> 1.2"
-  gem "tzinfo-data"
-end
-
-# Performance-booster for watching directories on Windows
-gem "wdm", "~> 0.1.1", :platforms => [:mingw, :x64_mingw, :mswin]
-
-# Lock kramdown version for security
-gem "kramdown", ">= 2.3.1"
+# Use GitHub Pages gem which will manage all dependencies
+gem "github-pages", "~> 228"
 
 # For Ruby 3.0+ compatibility
-gem "webrick", "~> 1.7"
-
-# Required for Jekyll 3.9.x with GitHub Pages
-gem "github-pages", "~> 228" 
+gem "webrick", "~> 1.7" 

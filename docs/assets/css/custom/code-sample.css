@@ -1,0 +1,554 @@
+/* Special styling for code samples in examples page - MOVED TO examples.css */
+/* This file should only contain styles for the documentation pages */
+
+/* Styles for highlight wrapper and manual copy button */
+.highlight-wrapper {
+  position: relative !important;
+  margin: 1rem 0;
+  background-color: #f8fafc !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  overflow: visible !important; /* Changed from hidden to visible to show copy button */
+}
+
+.highlight-wrapper .highlight {
+  margin: 0 !important;
+  background: transparent !important;
+}
+
+/* Simple and direct fix for language text in code blocks */
+.highlight-wrapper .highlight pre {
+  margin: 0 !important;
+  padding: 1.5rem !important;
+  padding-right: 3rem !important; /* Space for copy button */
+  background: transparent !important;
+  border: none !important;
+  position: relative !important;
+}
+
+/* Copy button styling */
+.manual-copy-btn, .copy-button {
+  position: absolute !important;
+  top: 0.75rem !important;
+  right: 0.75rem !important;
+  background: white !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 4px !important;
+  padding: 0.4rem !important;
+  cursor: pointer !important;
+  color: #718096 !important;
+  opacity: 0.9 !important;
+  transition: all 0.2s ease !important;
+  z-index: 100 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.manual-copy-btn svg, .copy-button svg {
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.manual-copy-btn:hover, .copy-button:hover {
+  background-color: #f7fafc !important;
+  opacity: 1 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.manual-copy-btn.copied, .copy-button.copied {
+  color: #38a169 !important;
+  border-color: #38a169 !important;
+  opacity: 1 !important;
+  background-color: #f0fff4 !important;
+}
+
+/* Language indicators for different code blocks */
+.highlight-wrapper[data-language]::before {
+  content: attr(data-language);
+  position: absolute !important;
+  top: 0.75rem !important;
+  right: 3.5rem !important;
+  background-color: rgba(0,0,0,0.03) !important;
+  color: #718096 !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.025em !important;
+  text-transform: uppercase !important;
+  padding: 0.25rem 0.5rem !important;
+  border-radius: 4px !important;
+  z-index: 90 !important;
+}
+
+/* Syntax highlights - Rouge and Jekyll specific */
+.rouge-table {
+  border: 0 !important;
+  margin: 0 !important;
+  width: 100%;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.rouge-table td {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.rouge-table pre {
+  margin: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.rouge-table .gutter {
+  display: none !important;
+}
+
+.rouge-table .code {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Override default pre/code styles */
+pre {
+  white-space: pre;
+  word-wrap: normal;
+  overflow-x: auto;
+  background: transparent !important;
+  border: none !important;
+}
+
+pre code {
+  white-space: pre;
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Fix inline code */
+code.highlighter-rouge {
+  background: rgba(0,0,0,0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  border: none !important;
+}
+
+/* Fix LANGUAGE- text display in code blocks */
+.highlight-wrapper pre code > :first-child:contains("LANGUAGE-") {
+  display: none !important;
+}
+
+/* Hide any span containing "LANGUAGE-" */
+.highlight-wrapper code span:contains("LANGUAGE-") {
+  display: none !important;
+}
+
+/* Syntax highlighting for Rust code */
+.highlight .language-rust .kw,
+.highlight .language-rust .k, 
+.highlight .language-rust .kd {
+  color: #5931e8;
+  font-weight: 500;
+}
+
+.highlight .language-rust .fn,
+.highlight .language-rust .nf {
+  color: #5480a6;
+}
+
+.highlight .language-rust .use,
+.highlight .language-rust .struct,
+.highlight .language-rust .let,
+.highlight .language-rust .mut {
+  color: #5931e8;
+}
+
+/* Remove any duplicate language indicators that might be in the examples page */
+.example-content .highlight::before {
+  display: none !important;
+}
+
+/* Specific markup for syntax */
+.example-content code {
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  background: transparent !important;
+  border: none !important;
+}
+
+.example-content pre {
+  margin: 0 !important;
+  padding: 1rem 1.5rem !important; /* Adjusted padding */
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Fix background overlapping */
+.highlight pre.highlight {
+  background: #f8fafc !important;
+  border: none !important;
+  padding: 1.5rem !important;
+  padding-right: 3rem !important; /* Extra space for copy button */
+  margin-right: 0 !important;
+}
+
+/* Remove duplicate language indicator inside the code block */
+.highlight-wrapper .highlight .language-toml::before,
+.highlight-wrapper .highlight .language-rust::before,
+.highlight-wrapper .highlight .language-bash::before,
+.highlight-wrapper .highlight .language-json::before,
+.highlight-wrapper .highlight .language-yaml::before {
+  display: none !important;
+}
+
+/* Hide any text that starts with "LANGUAGE-" in code blocks */
+pre code span:first-child:not(code *):-webkit-any(
+  [class^="LANGUAGE-"], 
+  [class*=" LANGUAGE-"]
+) {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* General fix to hide language prefixes in code blocks */
+.highlight-wrapper .highlight pre .nn:first-child:contains("LANGUAGE-") {
+  display: none !important;
+}
+
+/* Generic rule to catch any LANGUAGE- prefix at the start of code blocks */
+.highlight-wrapper .highlight pre *:first-child:contains("LANGUAGE-") {
+  display: none !important;
+}
+
+/* Direct targeting of LANGUAGE- text nodes */
+.highlight-wrapper .highlight pre::first-line:contains("LANGUAGE-") {
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  display: none !important;
+}
+
+/* Target specific element with LANGUAGE prefix showing in screenshot */
+.highlight-wrapper code span.nx:first-child:contains("LANGUAGE-"),
+.highlight-wrapper code span.nl:first-child:contains("LANGUAGE-"),
+.highlight-wrapper code span.nt:first-child:contains("LANGUAGE-"),
+.highlight-wrapper code span.nn:first-child:contains("LANGUAGE-") {
+  display: none !important;
+}
+
+/* Target the first line if it contains LANGUAGE */
+.highlight-wrapper pre:has(> :first-child:contains("LANGUAGE-")) > :first-child {
+  display: none !important;
+}
+
+/* Force hide any element that would contain the LANGUAGE text */
+.highlight-wrapper .highlight-rouge .highlight:first-line {
+  color: transparent !important; 
+}
+
+/* Hide Rouge language indicator that appears at the start of code blocks */
+.highlight-wrapper .highlight .highlight code span.c1:first-child,
+.highlight-wrapper .highlight .highlight code span:first-child {
+  display: none !important;
+}
+
+/* Hide the very first line if it contains only the language indicator */
+.highlight-wrapper .highlight pre code > :first-child {
+  display: none !important;
+}
+
+/* Direct targeting of the language comment in Rouge */
+.highlight-wrapper .highlight code .c1:first-child,
+.highlight-wrapper .highlight code .c:first-child,
+.highlight-wrapper .highlight code .cm:first-child {
+  display: none !important;
+}
+
+/* Direct targeting of the language comment in Rouge */
+.highlight-wrapper .highlight .rouge-table .rouge-gutter,
+.highlight-wrapper .highlight .rouge-table .rouge-code {
+  vertical-align: top !important;
+}
+
+.highlight-wrapper .highlight .rouge-table .rouge-code pre {
+  padding-top: 0 !important;
+}
+
+/* Force hide the first line */
+.highlight-wrapper .highlight .rouge-table tr:first-child td.rouge-code {
+  visibility: hidden !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  display: none !important;
+}
+
+/* Target any text containing "LANGUAGE-" more directly */
+.highlight-wrapper .highlight {
+  position: relative;
+}
+
+.highlight-wrapper .highlight::before {
+  content: none !important;
+  display: none !important;
+}
+
+.highlight-wrapper pre code {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Hide the first line text with a white overlay */
+.highlight-wrapper .highlight pre code::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1.5em; /* Adjust as needed */
+  background-color: #f8fafc; /* Match the background color */
+  z-index: 10;
+}
+
+/* Override the display:none on first-child so other code isn't hidden */
+.highlight-wrapper .highlight pre code > :first-child {
+  display: inline !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  opacity: 0 !important;
+}
+
+/* Hide specific text containing "LANGUAGE-" */
+.highlight-wrapper pre:first-line,
+.highlight-wrapper code:first-line {
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+/* Ensure real code starts after the language indicator */
+.highlight-wrapper pre code {
+  display: block;
+  margin-top: -20px !important;
+  padding-top: 20px !important;
+}
+
+/* Hide LANGUAGE- prefix globally with !important */
+*:not(button):not(a)[class*="language-"]:before,
+*:not(button):not(a)[class*="LANGUAGE-"]:before,
+*:contains("LANGUAGE-"),
+*:contains("language-") {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  z-index: -1 !important;
+}
+
+/* Overlay technique to hide the first line */
+.highlight-wrapper .highlight {
+  position: relative !important;
+}
+
+.highlight-wrapper .highlight:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2em;
+  background-color: inherit;
+  z-index: 5;
+}
+
+/* Remove padding for the overlay */
+.highlight-wrapper pre {
+  padding-top: 2em !important;
+}
+
+/* Fix for example-content highlight wrappers */
+.examples-container .highlight-wrapper {
+  position: relative !important;
+  margin: 1rem 0 !important;
+  background-color: #f8fafc !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  overflow: visible !important; /* Changed from hidden to visible */
+}
+
+.examples-container .example-content .highlight {
+  margin: 0 !important;
+  background: transparent !important;
+  overflow: visible !important; /* Changed from hidden to visible for copy button */
+}
+
+.examples-container .example-content .highlight pre {
+  margin: 0 !important;
+  padding: 1.5rem !important;
+  padding-right: 3rem !important; /* Space for copy button */
+  background: transparent !important;
+  border: none !important;
+  position: relative !important; /* Added for positioning */
+}
+
+/* Ensure all overlays and pseudo-elements are disabled for examples */
+.examples-container .example-content .highlight::before,
+.examples-container .example-content .highlight pre::before,
+.examples-container .example-content .highlight pre code::before {
+  display: none !important;
+  content: none !important;
+}
+
+/* More specific fix for example page copy button */
+.examples-container button.copy-button.manual-copy-btn {
+  position: absolute !important;
+  top: 0.75rem !important;
+  right: 0.75rem !important;
+  background: white !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 4px !important;
+  padding: 0.4rem !important;
+  cursor: pointer !important;
+  color: #718096 !important;
+  opacity: 0.9 !important;
+  transition: all 0.2s ease !important;
+  z-index: 100 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  visibility: visible !important;
+  margin: 0 !important;
+}
+
+/* Override any potentially problematic selectors for examples */
+.examples-container *::before,
+.examples-container *::after {
+  display: none !important;
+}
+
+/* Exempting specific selectors from examples container */
+.examples-container *[class*="contains"],
+.examples-container *:first-child,
+.examples-container *:first-line {
+  display: initial !important;
+  visibility: visible !important;
+  height: auto !important;
+  opacity: 1 !important;
+  position: static !important;
+}
+
+/* Reset overlay elements for examples */
+.examples-container .highlight-wrapper::before,
+.examples-container .highlight::before,
+.examples-container pre::before,
+.examples-container code::before {
+  content: none !important;
+  display: none !important;
+  background: none !important;
+  height: 0 !important;
+}
+
+/* More specific override for the copy button */
+.examples-container .manual-copy-btn {
+  top: 12px !important;
+  right: 12px !important;
+  position: absolute !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 999 !important; /* Very high z-index to ensure it's on top */
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* DIRECT TARGETED FIX FOR EXAMPLES PAGE COPY BUTTON */
+.examples-container .manual-copy-btn svg {
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: static !important;
+}
+
+/* Ensure the copy button is properly positioned and visible */
+.examples-container .highlight-wrapper {
+  overflow: visible !important;
+}
+
+/* Remove any problematic styling from examples page elements */
+.examples-container .highlight-wrapper::before,
+.examples-container .highlight::before,
+.examples-container pre::before,
+.examples-container code::before {
+  display: none !important;
+  content: none !important;
+}
+
+/* Ensure nothing gets hidden by our previous fixes */
+.examples-container pre *:first-child {
+  display: inline !important;
+  visibility: visible !important;
+  height: auto !important;
+  opacity: 1 !important;
+}
+
+/* Remove these problematic selectors */
+.highlight-wrapper .highlight pre .nn:first-child:contains("LANGUAGE-"),
+.highlight-wrapper .highlight pre *:first-child:contains("LANGUAGE-"),
+.highlight-wrapper .highlight .highlight code span:contains("LANGUAGE-"),
+.highlight-wrapper pre:has(> :first-child:contains("LANGUAGE-")) > :first-child {
+  /* Commented out to avoid affecting the examples page */
+  /* display: none !important; */
+}
+
+/* Replace with a simpler solution for docs pages */
+/* Use the overlay approach for docs pages only */
+.highlight-wrapper:not(.examples-container *) .highlight pre {
+  position: relative !important;
+}
+
+.highlight-wrapper:not(.examples-container *) .highlight pre::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1.5em;
+  background-color: #f8fafc;
+  z-index: 5;
+}
+
+/* More general fix to ensure the copy button works in the examples page */
+.examples-container .highlight-wrapper {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.examples-container .manual-copy-btn {
+  position: absolute !important;
+  top: 0.75rem !important;
+  right: 0.75rem !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+} 

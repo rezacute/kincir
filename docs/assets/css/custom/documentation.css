@@ -1,0 +1,282 @@
+/* Custom styles for documentation pages */
+
+/* Fix margins and layout for documentation pages */
+.docs-container-page h1 {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  color: #2d3748;
+  font-size: 2.5rem;
+}
+
+.docs-container-page h2 {
+  margin-top: 3rem;
+  margin-bottom: 1.5rem;
+  color: #4a5568;
+  font-size: 1.8rem;
+}
+
+.docs-container-page h3 {
+  margin-top: 2.5rem;
+  margin-bottom: 1.25rem;
+  color: #4a5568;
+  font-size: 1.5rem;
+}
+
+/* Fix code blocks in documentation pages */
+.docs-container-page pre {
+  margin: 2rem 0;
+  padding: 1.75rem;
+  background-color: #f8fafc !important;
+  border-radius: 8px;
+  overflow-x: auto;
+  position: relative;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.docs-container-page code {
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* Fix inline code */
+.docs-container-page p code,
+.docs-container-page li code {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  color: #dd1144;
+  font-size: 0.9em;
+}
+
+/* Improve list spacing */
+.docs-container-page ul,
+.docs-container-page ol {
+  margin: 1.75rem 0;
+  padding-left: 2.25rem;
+}
+
+.docs-container-page li {
+  margin-bottom: 0.75rem;
+}
+
+.docs-container-page li:last-child {
+  margin-bottom: 0;
+}
+
+/* Fix blockquotes */
+.docs-container-page blockquote {
+  border-left: 4px solid #4299e1;
+  padding: 1rem 1.5rem;
+  margin: 2rem 0;
+  color: #4a5568;
+  font-style: italic;
+  background-color: rgba(66, 153, 225, 0.05);
+  border-radius: 0 8px 8px 0;
+}
+
+/* Add a nice box for notes */
+.docs-container-page .note {
+  background-color: #ebf8ff;
+  border-left: 4px solid #4299e1;
+  padding: 1.25rem 1.5rem;
+  margin: 2rem 0;
+  border-radius: 0 8px 8px 0;
+}
+
+/* Fix table styles */
+.docs-container-page table {
+  width: 100%;
+  margin: 2rem 0;
+  border-collapse: collapse;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.docs-container-page th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  text-align: left;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.docs-container-page td {
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+/* Fix highlighted syntax for documentation */
+.docs-container-page .highlight {
+  margin: 0;
+  background: transparent !important;
+}
+
+.docs-container-page .highlight pre.highlight {
+  background: #f8fafc !important;
+  border: none !important;
+  padding: 1.75rem !important;
+  margin: 0 !important;
+}
+
+/* Fix links in documentation */
+.docs-container-page a {
+  color: #3182ce;
+  text-decoration: none;
+  transition: color 0.2s;
+  padding-bottom: 1px;
+  border-bottom: 1px solid transparent;
+}
+
+.docs-container-page a:hover {
+  color: #2c5282;
+  border-bottom: 1px solid #2c5282;
+  text-decoration: none;
+}
+
+/* Fix broken links indication */
+.docs-container-page a[href^="/"]:not([href*="."]):after {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 5px;
+  border-radius: 50%;
+  background-color: #e53e3e;
+  vertical-align: middle;
+  transition: background-color 0.2s;
+}
+
+/* Paragraph spacing */
+.docs-container-page p {
+  margin-bottom: 1.75rem;
+  line-height: 1.7;
+}
+
+/* Improve installation section spacing */
+.docs-container-page section {
+  margin-bottom: 4rem;
+  padding-bottom: 1rem;
+}
+
+/* Fix the "Next Steps" section */
+.docs-container-page #next-steps {
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e9ecef;
+}
+
+/* Make code samples more prominent */
+.docs-container-page .language-toml,
+.docs-container-page .language-rust,
+.docs-container-page .language-bash {
+  border-radius: 8px;
+  position: relative;
+}
+
+/* Add language indicator */
+.docs-container-page .language-toml::before,
+.docs-container-page .language-rust::before,
+.docs-container-page .language-bash::before {
+  content: attr(class);
+  position: absolute;
+  top: 0;
+  right: 1rem;
+  background-color: rgba(0,0,0,0.05);
+  color: #718096;
+  font-size: 0.75rem;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0 0 0 6px;
+  z-index: 10;
+}
+
+/* Rust syntax highlighting improvement */
+.docs-container-page .language-rust .kw,
+.docs-container-page .language-rust .k,
+.docs-container-page .language-rust .kd {
+  color: #5931e8;
+  font-weight: 500;
+}
+
+.docs-container-page .language-rust .fn,
+.docs-container-page .language-rust .nf {
+  color: #5480a6;
+}
+
+.docs-container-page .language-rust .s,
+.docs-container-page .language-rust .s1 {
+  color: #22863a;
+}
+
+.docs-container-page .language-rust .nb {
+  color: #5480a6;
+}
+
+.docs-container-page .language-rust .c,
+.docs-container-page .language-rust .c1,
+.docs-container-page .language-rust .cm {
+  color: #6a737d;
+  font-style: italic;
+}
+
+/* Add copy button functionality */
+.docs-container-page pre {
+  position: relative;
+}
+
+.docs-container-page pre .copy-button {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+  color: #718096;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.docs-container-page pre .copy-button:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.docs-container-page pre .copy-button.copied {
+  color: #38a169;
+  border-color: #38a169;
+}
+
+/* Add spacing between adjacent code blocks */
+.docs-container-page pre + pre {
+  margin-top: 1rem;
+}
+
+/* Improve spacing between headings and code blocks */
+.docs-container-page h2 + pre,
+.docs-container-page h3 + pre {
+  margin-top: 1.5rem;
+}
+
+/* Ensure content has proper spacing from sidebar */
+@media (min-width: 768px) {
+  .docs-content {
+    padding-left: 2rem;
+  }
+}
+
+/* Add spacing between adjacent lists */
+.docs-container-page ul + ul,
+.docs-container-page ol + ol,
+.docs-container-page ul + ol,
+.docs-container-page ol + ul {
+  margin-top: -1rem;
+} 
