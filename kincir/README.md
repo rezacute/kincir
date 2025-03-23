@@ -10,7 +10,7 @@ Kincir is a Rust library that provides a unified interface for message streaming
 
 - Unified messaging interface with support for multiple backends (Kafka, RabbitMQ)
 - Message routing with customizable handlers
-- Built-in logging support
+- Built-in logging support (optional via feature flag)
 - Message UUID generation for tracking and identification
 - Customizable message metadata support
 - Async/await support
@@ -22,7 +22,23 @@ Add kincir to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-kincir = "0.1.3"
+kincir = "0.1.5"
+```
+
+### Feature Flags
+
+Kincir provides feature flags to customize the library:
+
+```toml
+[dependencies]
+# Default features (includes logging)
+kincir = "0.1.5"
+
+# Without logging
+kincir = { version = "0.1.5", default-features = false }
+
+# Explicitly enable logging
+kincir = { version = "0.1.5", features = ["logging"] }
 ```
 
 ## Build and Development
@@ -88,11 +104,14 @@ let message = message.with_metadata("content-type", "text/plain");
 
 ### Setting Up a Message Router
 
-The Router is a central component that handles message flow between publishers and subscribers:
+The Router is a central component that handles message flow between publishers and subscribers.
+
+#### With Logging (Default)
 
 ```rust
 use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
-use kincir::router::{Router, Logger, StdLogger};
+use kincir::logging::{Logger, StdLogger};
+use kincir::router::Router;
 use kincir::Message;
 use std::sync::Arc;
 
@@ -102,8 +121,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let logger = Arc::new(StdLogger::new(true, true));
 
     // Configure message brokers
-    let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672"));
-    let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672", "my-queue"));
+    let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
+    let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
 
     // Define message handler
     let handler = Arc::new(|msg: Message| {
@@ -115,9 +134,48 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         })
     });
 
-    // Create and run router
+    // Create and run router with logger
     let router = Router::new(
         logger,
+        "input-exchange".to_string(),
+        "output-exchange".to_string(),
+        subscriber,
+        publisher,
+        handler,
+    );
+
+    router.run().await
+}
+```
+
+#### Without Logging
+
+When the `logging` feature is disabled, the Router is used without a logger:
+
+```rust
+use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
+use kincir::router::Router;
+use kincir::Message;
+use std::sync::Arc;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // Configure message brokers
+    let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
+    let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
+
+    // Define message handler
+    let handler = Arc::new(|msg: Message| {
+        Box::pin(async move {
+            // Process the message
+            let mut processed_msg = msg;
+            processed_msg.set_metadata("processed", "true");
+            Ok(vec![processed_msg])
+        })
+    });
+
+    // Create and run router without logger
+    let router = Router::new(
         "input-exchange".to_string(),
         "output-exchange".to_string(),
         subscriber,
@@ -169,12 +227,26 @@ Kincir provides Kafka support through the `kafka` module:
 
 ```rust
 use kincir::kafka::{KafkaPublisher, KafkaSubscriber};
+use tokio::sync::mpsc;
 
-// Configure Kafka publisher
-let publisher = KafkaPublisher::new("localhost:9092");
+// Set up channels
+let (tx, rx) = mpsc::channel(100);
 
-// Configure Kafka subscriber
-let subscriber = KafkaSubscriber::new("localhost:9092", "consumer-group-id");
+// Configure Kafka publisher and subscriber (default with logging)
+let publisher = KafkaPublisher::new(
+    vec!["localhost:9092".to_string()],
+    tx,
+    logger.clone(), // Only needed with logging feature
+);
+
+let subscriber = KafkaSubscriber::new(
+    vec!["localhost:9092".to_string()],
+    "consumer-group-id".to_string(),
+    rx,
+    logger, // Only needed with logging feature
+);
+
+// Without logging feature, the logger parameter is not needed
 ```
 
 ### RabbitMQ
@@ -184,11 +256,13 @@ RabbitMQ support is available through the `rabbitmq` module:
 ```rust
 use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
 
-// Configure RabbitMQ publisher
-let publisher = RabbitMQPublisher::new("amqp://localhost:5672");
+// Configure RabbitMQ components
+let publisher = RabbitMQPublisher::new("amqp://localhost:5672").await?;
+let subscriber = RabbitMQSubscriber::new("amqp://localhost:5672").await?;
 
-// Configure RabbitMQ subscriber
-let subscriber = RabbitMQSubscriber::new("amqp://localhost:5672", "my-queue");
+// With logging feature, you can optionally add a logger
+// publisher = publisher.with_logger(logger.clone());
+// subscriber = subscriber.with_logger(logger);
 ```
 
 ## Message Structure

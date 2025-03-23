@@ -4,38 +4,64 @@
 //! allowing integration with Apache Kafka message brokers. The implementation uses channels
 //! for message passing and includes proper error handling.
 //!
+//! The functionality varies depending on feature flags:
+//! 
+//! - With the "logging" feature enabled, logging is integrated throughout the components
+//! - Without the "logging" feature, operations proceed without logging
+//!
 //! # Example
 //!
 //! ```rust,no_run
 //! use kincir::kafka::{KafkaPublisher, KafkaSubscriber};
-//! use kincir::router::{Router, StdLogger};
 //! use std::sync::Arc;
 //! use tokio::sync::mpsc;
 //!
-//! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-//!     let logger = Arc::new(StdLogger::new(true, true));
-//!     let (tx, rx) = mpsc::channel(100);
+//! # async fn example() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+//! // Set up channels
+//! let (tx, rx) = mpsc::channel(100);
 //!
-//!     // Initialize Kafka components
-//!     let publisher = Arc::new(KafkaPublisher::new(
-//!         vec!["localhost:9092".to_string()],
-//!         tx,
-//!         logger.clone(),
-//!     ));
+//! # #[cfg(feature = "logging")]
+//! # {
+//! // With the "logging" feature
+//! use kincir::logging::{Logger, StdLogger};
+//! let logger = Arc::new(StdLogger::new(true, true));
 //!
-//!     let subscriber = Arc::new(KafkaSubscriber::new(
-//!         vec!["localhost:9092".to_string()],
-//!         "my-group".to_string(),
-//!         rx,
-//!         logger,
-//!     ));
+//! let publisher = Arc::new(KafkaPublisher::new(
+//!     vec!["localhost:9092".to_string()],
+//!     tx,
+//!     logger.clone(),
+//! ));
 //!
-//!     Ok(())
-//! }
+//! let subscriber = Arc::new(KafkaSubscriber::new(
+//!     vec!["localhost:9092".to_string()],
+//!     "my-group".to_string(),
+//!     rx,
+//!     logger,
+//! ));
+//! # }
+//!
+//! # #[cfg(not(feature = "logging"))]
+//! # {
+//! // Without the "logging" feature
+//! let publisher = Arc::new(KafkaPublisher::new(
+//!     vec!["localhost:9092".to_string()],
+//!     tx,
+//! ));
+//!
+//! let subscriber = Arc::new(KafkaSubscriber::new(
+//!     vec!["localhost:9092".to_string()],
+//!     "my-group".to_string(),
+//!     rx,
+//! ));
+//! # }
+//!
+//! # Ok(())
+//! # }
 //! ```
 
-use crate::{router::Logger, Message};
+use crate::Message;
+#[cfg(feature = "logging")]
+use crate::logging::Logger;
 use async_trait::async_trait;
 use std::sync::Arc;
 use thiserror::Error;
@@ -54,14 +80,23 @@ pub enum KafkaError {
 
 /// Implementation of the Publisher trait for Kafka.
 ///
-/// Uses channels for message passing and includes logging capabilities.
+/// Uses channels for message passing and includes logging capabilities when the
+/// "logging" feature is enabled.
+#[cfg(feature = "logging")]
 pub struct KafkaPublisher {
     tx: mpsc::Sender<Message>,
     logger: Arc<dyn Logger>,
 }
 
+/// Implementation of the Publisher trait for Kafka without logging.
+#[cfg(not(feature = "logging"))]
+pub struct KafkaPublisher {
+    tx: mpsc::Sender<Message>,
+}
+
+#[cfg(feature = "logging")]
 impl KafkaPublisher {
-    /// Creates a new KafkaPublisher instance.
+    /// Creates a new KafkaPublisher instance with logging.
     ///
     /// # Arguments
     ///
@@ -73,6 +108,20 @@ impl KafkaPublisher {
     }
 }
 
+#[cfg(not(feature = "logging"))]
+impl KafkaPublisher {
+    /// Creates a new KafkaPublisher instance without logging.
+    ///
+    /// # Arguments
+    ///
+    /// * `_brokers` - List of Kafka broker addresses
+    /// * `tx` - Channel sender for messages
+    pub fn new(_brokers: Vec<String>, tx: mpsc::Sender<Message>) -> Self {
+        Self { tx }
+    }
+}
+
+#[cfg(feature = "logging")]
 #[async_trait]
 impl super::Publisher for KafkaPublisher {
     type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -101,16 +150,38 @@ impl super::Publisher for KafkaPublisher {
     }
 }
 
-/// Implementation of the Subscriber trait for Kafka.
-///
-/// Uses channels for message passing and includes logging capabilities.
+#[cfg(not(feature = "logging"))]
+#[async_trait]
+impl super::Publisher for KafkaPublisher {
+    type Error = Box<dyn std::error::Error + Send + Sync>;
+
+    async fn publish(&self, _topic: &str, messages: Vec<Message>) -> Result<(), Self::Error> {
+        for message in messages {
+            self.tx
+                .send(message)
+                .await
+                .map_err(|_| KafkaError::ChannelSend)?;
+        }
+        Ok(())
+    }
+}
+
+/// Implementation of the Subscriber trait for Kafka with logging.
+#[cfg(feature = "logging")]
 pub struct KafkaSubscriber {
     rx: Arc<tokio::sync::Mutex<mpsc::Receiver<Message>>>,
     logger: Arc<dyn Logger>,
 }
 
+/// Implementation of the Subscriber trait for Kafka without logging.
+#[cfg(not(feature = "logging"))]
+pub struct KafkaSubscriber {
+    rx: Arc<tokio::sync::Mutex<mpsc::Receiver<Message>>>,
+}
+
+#[cfg(feature = "logging")]
 impl KafkaSubscriber {
-    /// Creates a new KafkaSubscriber instance.
+    /// Creates a new KafkaSubscriber instance with logging.
     ///
     /// # Arguments
     ///
@@ -131,32 +202,70 @@ impl KafkaSubscriber {
     }
 }
 
+#[cfg(not(feature = "logging"))]
+impl KafkaSubscriber {
+    /// Creates a new KafkaSubscriber instance without logging.
+    ///
+    /// # Arguments
+    ///
+    /// * `_brokers` - List of Kafka broker addresses
+    /// * `_group_id` - Consumer group ID
+    /// * `rx` - Channel receiver for messages
+    pub fn new(
+        _brokers: Vec<String>,
+        _group_id: String,
+        rx: mpsc::Receiver<Message>,
+    ) -> Self {
+        Self {
+            rx: Arc::new(tokio::sync::Mutex::new(rx)),
+        }
+    }
+}
+
+#[cfg(feature = "logging")]
 #[async_trait]
 impl super::Subscriber for KafkaSubscriber {
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
-    async fn subscribe(&self, _topic: &str) -> Result<(), Self::Error> {
+    async fn subscribe(&self, topic: &str) -> Result<(), Self::Error> {
         self.logger
-            .info(&format!("Subscribing to topic {}", _topic))
+            .info(&format!("Subscribing to topic {}", topic))
             .await;
         Ok(())
     }
 
     async fn receive(&self) -> Result<Message, Self::Error> {
-        let mut rx = self.rx.lock().await;
-        let result = rx.recv().await.ok_or_else(|| {
-            Box::new(KafkaError::ChannelReceive) as Box<dyn std::error::Error + Send + Sync>
-        });
-        match &result {
-            Ok(_) => {
-                self.logger.info("Received message from channel").await;
-            }
-            Err(e) => {
+        self.logger.info("Waiting to receive message").await;
+        let mut rx_guard = self.rx.lock().await;
+        match rx_guard.recv().await {
+            Some(message) => {
                 self.logger
-                    .error(&format!("Error receiving message: {}", e))
+                    .info(&format!("Received message {}", message.uuid))
                     .await;
+                Ok(message)
+            }
+            None => {
+                self.logger.error("Channel closed").await;
+                Err(Box::new(KafkaError::ChannelReceive))
             }
         }
-        result
+    }
+}
+
+#[cfg(not(feature = "logging"))]
+#[async_trait]
+impl super::Subscriber for KafkaSubscriber {
+    type Error = Box<dyn std::error::Error + Send + Sync>;
+
+    async fn subscribe(&self, _topic: &str) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    async fn receive(&self) -> Result<Message, Self::Error> {
+        let mut rx_guard = self.rx.lock().await;
+        match rx_guard.recv().await {
+            Some(message) => Ok(message),
+            None => Err(Box::new(KafkaError::ChannelReceive)),
+        }
     }
 }

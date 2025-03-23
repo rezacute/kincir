@@ -1,11 +1,15 @@
 [package]
 name = "kincir"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 description = "A Rust message streaming library inspired by Watermill"
 license = "MIT"
 authors = ["Riza Alaudin Syah <rezaqt@gmail.com>"]
 repository = "https://github.com/rezacute/kincir"
+
+[features]
+default = ["logging"]
+logging = []
 
 [dependencies]
 tokio = { version = "1.36", features = ["full"] }
