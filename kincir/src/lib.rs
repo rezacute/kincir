@@ -10,6 +10,8 @@
 //!
 //! When the "logging" feature is enabled (default), Kincir also provides built-in logging capabilities.
 //!
+//! When the "protobuf" feature is enabled, Kincir provides Protocol Buffers encoding/decoding capabilities.
+//!
 //! # Example
 //!
 //! Basic usage with RabbitMQ backend:
@@ -155,8 +157,13 @@ pub mod router;
 #[cfg(feature = "logging")]
 pub mod logging;
 
+#[cfg(feature = "protobuf")]
+pub mod protobuf;
+
 // Re-export commonly used types
 pub use router::HandlerFunc;
 pub use router::Router;
 #[cfg(feature = "logging")]
 pub use logging::{Logger, NoOpLogger, StdLogger};
+#[cfg(feature = "protobuf")]
+pub use protobuf::{MessageCodec, ProtobufCodec};
