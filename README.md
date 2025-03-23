@@ -1,5 +1,12 @@
 # Kincir
 
+<!-- 
+GitHub Pages Setup:
+1. Go to repository Settings > Pages
+2. Under "Build and deployment" > "Source", select "GitHub Actions"
+3. This will enable GitHub Pages for this repository
+-->
+
 [![Crates.io](https://img.shields.io/crates/v/kincir.svg)](https://crates.io/crates/kincir)
 [![Documentation](https://docs.rs/kincir/badge.svg)](https://docs.rs/kincir)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
