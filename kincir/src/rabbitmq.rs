@@ -21,7 +21,6 @@
 //!
 //!     Ok(())
 //! }
-//! ```
 
 #[cfg(feature = "logging")]
 use crate::logging::Logger;

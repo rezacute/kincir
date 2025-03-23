@@ -157,9 +157,6 @@ pub type HandlerFunc = Arc<
 ///     router.run().await
 /// # }
 /// # }
-/// ```
-
-#[cfg(feature = "logging")]
 pub struct Router {
     logger: Arc<dyn Logger>,
     consume_topic: String,
