@@ -70,7 +70,6 @@
 //!     router.run().await
 //! # }
 //! # }
-//! ```
 
 use crate::Message;
 use std::error::Error;
@@ -157,6 +156,7 @@ pub type HandlerFunc = Arc<
 ///     router.run().await
 /// # }
 /// # }
+#[cfg(feature = "logging")]
 pub struct Router {
     logger: Arc<dyn Logger>,
     consume_topic: String,
