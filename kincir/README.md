@@ -39,6 +39,12 @@ kincir = { version = "0.1.5", default-features = false }
 
 # Explicitly enable logging
 kincir = { version = "0.1.5", features = ["logging"] }
+
+# With Protocol Buffers support
+kincir = { version = "0.1.5", features = ["protobuf"] }
+
+# With both logging and Protocol Buffers
+kincir = { version = "0.1.5", features = ["logging", "protobuf"] }
 ```
 
 ## Build and Development
@@ -273,6 +279,30 @@ Each message in Kincir consists of:
 - `payload`: The actual message content as a byte vector
 - `metadata`: A hash map of string key-value pairs for additional message information
 
+## Message Encoding and Decoding
+
+### Protocol Buffers Support
+
+When the `protobuf` feature is enabled, Kincir provides Protocol Buffers encoding/decoding capabilities:
+
+```rust
+use kincir::Message;
+use kincir::protobuf::{MessageCodec, ProtobufCodec};
+
+// Create a protobuf codec
+let codec = ProtobufCodec::new();
+
+// Create a message
+let message = Message::new(b"Hello".to_vec())
+    .with_metadata("content-type", "text/plain");
+
+// Encode the message to send over the wire
+let encoded = codec.encode(&message).unwrap();
+
+// Later, decode the message
+let decoded = codec.decode(&encoded).unwrap();
+```
+
 ## Message Handler
 
 Message handlers are async functions that process incoming messages and can produce zero or more output messages:
@@ -290,6 +320,38 @@ let handler = |msg: Message| {
     })
 };
 ```
+
+### Protocol Buffers Support
+
+When the `protobuf` feature flag is enabled, Kincir provides support for encoding and decoding messages using Protocol Buffers through the `MessageCodec` trait:
+
+```rust
+#[cfg(feature = "protobuf")]
+use kincir::{Message, MessageCodec, ProtobufCodec};
+
+// Create a message
+let message = Message::new(b"Hello, Protocol Buffers!".to_vec())
+    .with_metadata("encoding", "protobuf");
+
+// Create a Protocol Buffers codec
+let codec = ProtobufCodec::new();
+
+// Encode the message to Protocol Buffers binary format
+let encoded = codec.encode(&message).unwrap();
+
+// Decode the binary data back to a Message
+let decoded = codec.decode(&encoded).unwrap();
+
+assert_eq!(message.uuid, decoded.uuid);
+assert_eq!(message.payload, decoded.payload);
+assert_eq!(message.metadata, decoded.metadata);
+```
+
+This is particularly useful when you need:
+- Smaller message size compared to JSON
+- Stricter schema validation
+- Better performance for serialization and deserialization
+- Language-agnostic message exchange
 
 ## Roadmap to v1.0 🚀  
 

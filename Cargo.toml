@@ -3,7 +3,8 @@ resolver = "2"
 members = [
     "kincir",
     "examples/kafka-example",
-    "examples/rabbitmq-example"
+    "examples/rabbitmq-example",
+    "examples/protobuf-example"
 ]
 
 [workspace.package]
