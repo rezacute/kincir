@@ -95,4 +95,4 @@ impl Logger for NoOpLogger {
     async fn error(&self, _msg: &str) {
         // Do nothing
     }
-} 
+}

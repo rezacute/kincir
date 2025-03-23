@@ -23,9 +23,9 @@
 //! }
 //! ```
 
-use crate::Message;
 #[cfg(feature = "logging")]
 use crate::logging::Logger;
+use crate::Message;
 use async_trait::async_trait;
 use futures::StreamExt;
 use lapin::options::{BasicConsumeOptions, BasicPublishOptions, QueueDeclareOptions};
@@ -80,7 +80,7 @@ impl RabbitMQPublisher {
         let connection = Connection::connect(uri, ConnectionProperties::default())
             .await
             .map_err(RabbitMQError::RabbitMQ)?;
-        
+
         // Create a default NoOpLogger
         let logger = Arc::new(crate::logging::NoOpLogger::new());
 
@@ -102,7 +102,11 @@ impl super::Publisher for RabbitMQPublisher {
 
     async fn publish(&self, topic: &str, messages: Vec<Message>) -> Result<(), Self::Error> {
         self.logger
-            .info(&format!("Publishing {} messages to {}", messages.len(), topic))
+            .info(&format!(
+                "Publishing {} messages to {}",
+                messages.len(),
+                topic
+            ))
             .await;
 
         let channel = self.connection.create_channel().await.map_err(|e| {
@@ -136,7 +140,7 @@ impl super::Publisher for RabbitMQPublisher {
             let _ = confirm.await.map_err(|e| {
                 Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
             })?;
-            
+
             self.logger
                 .info(&format!("Published message {} to {}", message.uuid, topic))
                 .await;
@@ -229,7 +233,7 @@ impl RabbitMQSubscriber {
         let connection = Connection::connect(uri, ConnectionProperties::default())
             .await
             .map_err(RabbitMQError::RabbitMQ)?;
-            
+
         // Create a default NoOpLogger
         let logger = Arc::new(crate::logging::NoOpLogger::new());
 
@@ -258,7 +262,7 @@ impl super::Subscriber for RabbitMQSubscriber {
         self.logger
             .info(&format!("Subscribing to topic {}", topic))
             .await;
-            
+
         let channel = self.connection.create_channel().await.map_err(|e| {
             Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
         })?;
@@ -288,7 +292,7 @@ impl super::Subscriber for RabbitMQSubscriber {
                     Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
                 })?,
         );
-        
+
         self.logger
             .info(&format!("Successfully subscribed to topic {}", topic))
             .await;
@@ -298,7 +302,7 @@ impl super::Subscriber for RabbitMQSubscriber {
 
     async fn receive(&self) -> Result<Message, Self::Error> {
         self.logger.info("Waiting to receive message").await;
-        
+
         let topic_guard = self.topic.lock().await;
         let _topic = topic_guard.as_ref().ok_or_else(|| {
             Box::new(RabbitMQError::RabbitMQ(lapin::Error::InvalidChannelState(
@@ -324,15 +328,17 @@ impl super::Subscriber for RabbitMQSubscriber {
             delivery.ack(Default::default()).await.map_err(|e| {
                 Box::new(RabbitMQError::RabbitMQ(e)) as Box<dyn std::error::Error + Send + Sync>
             })?;
-            
+
             self.logger
                 .info(&format!("Received message {}", message.uuid))
                 .await;
-                
+
             Ok(message)
         } else {
-            self.logger.error("Consumer stream ended unexpectedly").await;
-            
+            self.logger
+                .error("Consumer stream ended unexpectedly")
+                .await;
+
             Err(
                 Box::new(RabbitMQError::RabbitMQ(lapin::Error::InvalidChannelState(
                     lapin::ChannelState::Error,

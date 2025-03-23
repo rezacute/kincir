@@ -5,7 +5,7 @@
 //! for message passing and includes proper error handling.
 //!
 //! The functionality varies depending on feature flags:
-//! 
+//!
 //! - With the "logging" feature enabled, logging is integrated throughout the components
 //! - Without the "logging" feature, operations proceed without logging
 //!
@@ -59,9 +59,9 @@
 //! # }
 //! ```
 
-use crate::Message;
 #[cfg(feature = "logging")]
 use crate::logging::Logger;
+use crate::Message;
 use async_trait::async_trait;
 use std::sync::Arc;
 use thiserror::Error;
@@ -211,11 +211,7 @@ impl KafkaSubscriber {
     /// * `_brokers` - List of Kafka broker addresses
     /// * `_group_id` - Consumer group ID
     /// * `rx` - Channel receiver for messages
-    pub fn new(
-        _brokers: Vec<String>,
-        _group_id: String,
-        rx: mpsc::Receiver<Message>,
-    ) -> Self {
+    pub fn new(_brokers: Vec<String>, _group_id: String, rx: mpsc::Receiver<Message>) -> Self {
         Self {
             rx: Arc::new(tokio::sync::Mutex::new(rx)),
         }

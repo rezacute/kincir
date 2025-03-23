@@ -5,7 +5,7 @@
 //!
 //! - A flexible `Router` implementation for message handling and routing
 //! - Type definitions for message handler functions
-//! 
+//!
 //! When the "logging" feature is enabled, it also includes integration with the
 //! `Logger` trait from the logging module.
 //!

@@ -21,7 +21,7 @@
 //! use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
 //! use kincir::router::Router;
 //! use std::sync::Arc;
-//! 
+//!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 //! // Create and configure components
 //! let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
@@ -34,7 +34,7 @@
 //!         Ok(vec![processed_msg])
 //!     })
 //! });
-//! 
+//!
 //! // Set up and run router (with or without logging based on feature)
 //! # #[cfg(feature = "logging")]
 //! # {
@@ -44,7 +44,7 @@
 //! let router = Router::new(
 //!     logger,
 //!     "input-queue".to_string(),
-//!     "output-queue".to_string(), 
+//!     "output-queue".to_string(),
 //!     subscriber.clone(),
 //!     publisher.clone(),
 //!     handler.clone(),
@@ -61,7 +61,7 @@
 //!     handler,
 //! );
 //! # }
-//! 
+//!
 //! router.run().await
 //! # }
 //! ```
@@ -161,9 +161,9 @@ pub mod logging;
 pub mod protobuf;
 
 // Re-export commonly used types
-pub use router::HandlerFunc;
-pub use router::Router;
 #[cfg(feature = "logging")]
 pub use logging::{Logger, NoOpLogger, StdLogger};
 #[cfg(feature = "protobuf")]
 pub use protobuf::{MessageCodec, ProtobufCodec};
+pub use router::HandlerFunc;
+pub use router::Router;

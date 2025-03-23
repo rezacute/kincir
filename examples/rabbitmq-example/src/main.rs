@@ -1,5 +1,5 @@
-use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
 use kincir::logging::StdLogger;
+use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
 use kincir::{HandlerFunc, Message, Router};
 use std::sync::Arc;
 
