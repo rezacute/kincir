@@ -1,0 +1,124 @@
+/* Custom styles for Kincir documentation */
+
+:root {
+    --primary-color: #4169e1;  /* Royal Blue */
+    --secondary-color: #1e3a8a;  /* Darker Blue */
+    --accent-color: #ffa500;  /* Orange - for windmill theme */
+}
+
+/* Adjust link colors and styling */
+.content a:link, .content a:visited {
+    color: var(--primary-color);
+}
+
+.content a:hover {
+    color: var(--accent-color);
+}
+
+a {
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Style the main heading */
+h1.fqn {
+    border-bottom: 1px solid var(--accent-color);
+    padding-bottom: 10px;
+}
+
+/* Style the sidebar sections */
+#sidebar .section {
+    border-left: 2px solid var(--primary-color);
+    padding-left: 10px;
+    margin-bottom: 20px;
+}
+
+#sidebar .section h3 {
+    color: var(--secondary-color);
+    font-weight: bold;
+}
+
+nav.sidebar {
+  background-color: #f7f7f7;
+}
+
+/* Style the main content area */
+main {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Add a small windmill icon before important items */
+.item-name::before {
+    content: "🔄 ";
+    opacity: 0.7;
+}
+
+/* Remove the icon from some elements */
+.impl-items .item-name::before,
+.methods .item-name::before {
+    content: "";
+}
+
+/* Style the code blocks */
+pre.rust {
+    padding: 15px;
+    border-radius: 5px;
+    background-color: #f5f5f5;
+    border-left: 3px solid var(--accent-color);
+}
+
+/* Style the main documentation section */
+.docblock {
+    padding: 15px;
+    border-radius: 5px;
+    background-color: rgba(65, 105, 225, 0.05);
+}
+
+/* Style the top navbar */
+nav.sub {
+    background-color: rgba(65, 105, 225, 0.1);
+    border-radius: 5px;
+    padding: 5px;
+}
+
+/* Custom styling for the navigation header */
+.nav-container {
+  padding: 10px 0;
+}
+
+/* Signature blocks */
+.signature {
+    border-left: 3px solid var(--primary-color);
+    background-color: rgba(65, 105, 225, 0.05);
+}
+
+/* Improve method documentation */
+.method-toggle {
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+/* Better styling for important documentation notes */
+.important-note {
+  background-color: #fff8dc;
+  border-left: 4px solid #ffd700;
+  padding: 10px 15px;
+  margin: 15px 0;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Improve the search box */
+.search-input {
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+/* Better styling for type definitions */
+.impl-items .method {
+  margin-bottom: 20px;
+} 

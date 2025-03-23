@@ -5,49 +5,69 @@
 //! - A unified API for publishing and subscribing to messages
 //! - Support for multiple message broker backends (Kafka, RabbitMQ)
 //! - Message routing with customizable handlers
-//! - Built-in logging capabilities
 //! - Message tracking with UUID generation
 //! - Extensible message metadata
 //!
-//! # Quick Start
+//! When the "logging" feature is enabled (default), Kincir also provides built-in logging capabilities.
+//!
+//! When the "protobuf" feature is enabled, Kincir provides Protocol Buffers encoding/decoding capabilities.
+//!
+//! # Example
+//!
+//! Basic usage with RabbitMQ backend:
 //!
 //! ```rust,no_run
-//! use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
-//! use kincir::router::{Router, Logger, StdLogger};
 //! use kincir::Message;
+//! use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
+//! use kincir::router::Router;
 //! use std::sync::Arc;
 //! use std::pin::Pin;
 //! use std::future::Future;
 //!
-//! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-//!     // Initialize components
-//!     let logger = Arc::new(StdLogger::new(true, true));
-//!     let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
-//!     let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
+//! # async fn example() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+//! // Create and configure components
+//! let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
+//! let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
 //!
-//!     // Create message handler
-//!     let handler = Arc::new(|msg: Message| -> Pin<Box<dyn Future<Output = Result<Vec<Message>, Box<dyn std::error::Error + Send + Sync>>> + Send>> {
-//!         Box::pin(async move {
-//!             // Process the message
-//!             let mut processed_msg = msg;
-//!             processed_msg.metadata.insert("processed".to_string(), "true".to_string());
-//!             Ok(vec![processed_msg])
-//!         })
-//!     });
+//! // Define message handler with explicit type signature
+//! let handler = Arc::new(|msg: Message| -> Pin<Box<dyn Future<Output = Result<Vec<Message>, Box<dyn std::error::Error + Send + Sync>>> + Send>> {
+//!     Box::pin(async move {
+//!         let processed_msg = msg.with_metadata("processed", "true");
+//!         Ok(vec![processed_msg])
+//!     })
+//! });
 //!
-//!     // Set up and run the router
-//!     let router = Router::new(
-//!         logger,
-//!         "input-queue".to_string(),
-//!         "output-queue".to_string(),
-//!         subscriber,
-//!         publisher,
-//!         handler,
-//!     );
+//! // Set up and run router (with or without logging based on feature)
+//! # #[cfg(feature = "logging")]
+//! # {
+//! // With logging (when "logging" feature is enabled)
+//! use kincir::logging::{Logger, StdLogger};
+//! let logger = Arc::new(StdLogger::new(true, true));
+//! let router = Router::new(
+//!     logger,
+//!     "input-queue".to_string(),
+//!     "output-queue".to_string(),
+//!     subscriber.clone(),
+//!     publisher.clone(),
+//!     handler.clone(),
+//! );
 //!
-//!     router.run().await
-//! }
+//! router.run().await
+//! # }
+//! # #[cfg(not(feature = "logging"))]
+//! # {
+//! // Without logging (when "logging" feature is disabled)
+//! let router = Router::new(
+//!     "input-queue".to_string(),
+//!     "output-queue".to_string(),
+//!     subscriber,
+//!     publisher,
+//!     handler,
+//! );
+//!
+//! router.run().await
+//! # }
+//! # }
 //! ```
 
 use async_trait::async_trait;
@@ -138,5 +158,16 @@ pub mod kafka;
 pub mod rabbitmq;
 pub mod router;
 
+#[cfg(feature = "logging")]
+pub mod logging;
+
+#[cfg(feature = "protobuf")]
+pub mod protobuf;
+
 // Re-export commonly used types
-pub use router::{HandlerFunc, Logger, Router, StdLogger};
+#[cfg(feature = "logging")]
+pub use logging::{Logger, NoOpLogger, StdLogger};
+#[cfg(feature = "protobuf")]
+pub use protobuf::{MessageCodec, ProtobufCodec};
+pub use router::HandlerFunc;
+pub use router::Router;

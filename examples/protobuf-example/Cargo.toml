@@ -1,0 +1,9 @@
+[package]
+name = "protobuf-example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+kincir = { path = "../../kincir", features = ["protobuf"] }
+tokio = { version = "1.36", features = ["full"] }
+chrono = "0.4" 
