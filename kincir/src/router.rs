@@ -51,6 +51,9 @@
 //!         publisher,
 //!         handler,
 //!     );
+//!     
+//!     // Run the router (with logging)
+//!     router.run().await
 //! # }
 //! # #[cfg(not(feature = "logging"))]
 //! # {
@@ -62,9 +65,10 @@
 //!         publisher,
 //!         handler,
 //!     );
-//! # }
-//!
+//!     
+//!     // Run the router (without logging)
 //!     router.run().await
+//! # }
 //! # }
 //! ```
 
@@ -90,13 +94,71 @@ pub type HandlerFunc = Arc<
         + Sync,
 >;
 
-/// The main router component that manages message flow between topics/queues.
+/// The Router struct handles message flow between publishers and subscribers.
 ///
-/// The Router is responsible for:
-/// - Subscribing to input topics
-/// - Processing messages using the provided handler
-/// - Publishing processed messages to output topics
-#[cfg_attr(feature = "logging", doc = "- Logging operations and errors")]
+/// # Example
+///
+/// ```rust,no_run
+/// use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
+/// use kincir::router::Router;
+/// use kincir::Message;
+/// use std::sync::Arc;
+/// use std::pin::Pin;
+/// use std::future::Future;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+/// # // The following part will only be compiled when the "logging" feature is enabled
+/// # #[cfg(feature = "logging")]
+/// # {
+/// # use kincir::logging::{Logger, StdLogger};
+/// # let logger = Arc::new(StdLogger::new(true, true));
+/// # }
+///     let handler = Arc::new(|msg: Message| -> Pin<Box<dyn Future<Output = Result<Vec<Message>, Box<dyn std::error::Error + Send + Sync>>> + Send>> {
+///         Box::pin(async move {
+///             // Process message here
+///             Ok(vec![msg])
+///         })
+///     });
+///
+///     // Set up router with RabbitMQ backend
+///     let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
+///     let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
+///
+/// # // Create the router differently based on feature flags
+/// # #[cfg(feature = "logging")]
+/// # {
+///     // With the "logging" feature enabled, include a logger
+/// # use kincir::logging::Logger;
+/// # let logger = Arc::new(kincir::logging::StdLogger::new(true, true));
+///     let router = Router::new(
+///         logger,
+///         "input-queue".to_string(),
+///         "output-queue".to_string(),
+///         subscriber,
+///         publisher,
+///         handler,
+///     );
+///     
+///     // Run the router (with logging)
+///     router.run().await
+/// # }
+/// # #[cfg(not(feature = "logging"))]
+/// # {
+///     // Without the "logging" feature, don't include a logger
+///     let router = Router::new(
+///         "input-queue".to_string(),
+///         "output-queue".to_string(),
+///         subscriber,
+///         publisher,
+///         handler,
+///     );
+///     
+///     // Run the router (without logging)
+///     router.run().await
+/// # }
+/// # }
+/// ```
+
 #[cfg(feature = "logging")]
 pub struct Router {
     logger: Arc<dyn Logger>,

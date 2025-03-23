@@ -21,14 +21,16 @@
 //! use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
 //! use kincir::router::Router;
 //! use std::sync::Arc;
+//! use std::pin::Pin;
+//! use std::future::Future;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 //! // Create and configure components
 //! let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
 //! let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
 //!
-//! // Define message handler
-//! let handler = Arc::new(|msg: Message| {
+//! // Define message handler with explicit type signature
+//! let handler = Arc::new(|msg: Message| -> Pin<Box<dyn Future<Output = Result<Vec<Message>, Box<dyn std::error::Error + Send + Sync>>> + Send>> {
 //!     Box::pin(async move {
 //!         let processed_msg = msg.with_metadata("processed", "true");
 //!         Ok(vec![processed_msg])
@@ -49,6 +51,8 @@
 //!     publisher.clone(),
 //!     handler.clone(),
 //! );
+//!
+//! router.run().await
 //! # }
 //! # #[cfg(not(feature = "logging"))]
 //! # {
@@ -60,9 +64,9 @@
 //!     publisher,
 //!     handler,
 //! );
-//! # }
 //!
 //! router.run().await
+//! # }
 //! # }
 //! ```
 
