@@ -1,10 +1,14 @@
-name: Build and Deploy Docs
+name: Build and Deploy API Docs
 
 on:
   push:
     branches: [main, add-feature-flags]
+    paths-ignore:
+      - 'docs/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
   # Allow manual triggering of the workflow
   workflow_dispatch:
 
@@ -20,12 +24,12 @@ permissions:
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
-  group: "pages"
+  group: "api-docs"
   cancel-in-progress: false
 
 jobs:
   build:
-    name: Build Documentation
+    name: Build API Documentation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,9 +49,10 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: './target/doc'
+          name: 'api-docs'
           
   deploy:
-    name: Deploy to GitHub Pages
+    name: Deploy API Docs to GitHub Pages
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -58,4 +63,6 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4 
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: 'api-docs' 
