@@ -22,7 +22,7 @@ Add kincir to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-kincir = "0.1.5"
+kincir = "0.1.6"
 ```
 
 ### Feature Flags
@@ -32,19 +32,19 @@ Kincir provides feature flags to customize the library:
 ```toml
 [dependencies]
 # Default features (includes logging)
-kincir = "0.1.5"
+kincir = "0.1.6"
 
 # Without logging
-kincir = { version = "0.1.5", default-features = false }
+kincir = { version = "0.1.6", default-features = false }
 
 # Explicitly enable logging
-kincir = { version = "0.1.5", features = ["logging"] }
+kincir = { version = "0.1.6", features = ["logging"] }
 
 # With Protocol Buffers support
-kincir = { version = "0.1.5", features = ["protobuf"] }
+kincir = { version = "0.1.6", features = ["protobuf"] }
 
 # With both logging and Protocol Buffers
-kincir = { version = "0.1.5", features = ["logging", "protobuf"] }
+kincir = { version = "0.1.6", features = ["logging", "protobuf"] }
 ```
 
 ## Build and Development
