@@ -1,0 +1,7 @@
+source "https://rubygems.org"
+
+# Use GitHub Pages gem which will manage all dependencies
+gem "github-pages", "~> 228"
+
+# For Ruby 3.0+ compatibility
+gem "webrick", "~> 1.7" 

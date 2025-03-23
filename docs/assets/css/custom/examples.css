@@ -1,0 +1,208 @@
+/*
+ * EXAMPLES PAGE STYLES
+ * This file contains styles that are ONLY for the examples page
+ */
+
+/* Basic container styles - now working with both container divs and direct elements */
+.examples-container,
+.docs-container-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* Heading styles for both container and direct elements */
+.examples-container h1,
+.docs-container-page h1 {
+  margin-bottom: 0.5rem;
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.examples-container .intro-text,
+.docs-container-page > p:first-of-type {
+  margin-bottom: 2rem;
+  font-size: 1.1rem;
+  color: #4a5568;
+}
+
+.examples-container h2,
+.docs-container-page h2 {
+  margin: 2rem 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #edf2f7;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.examples-container h3,
+.docs-container-page h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+/* Example sections - support both old and new structure */
+.example-section,
+.docs-container-page > section {
+  margin-bottom: 3rem;
+}
+
+.example-item,
+.docs-container-page > h3 {
+  margin-bottom: 1.5rem;
+}
+
+.example-content p,
+.docs-container-page p {
+  margin-bottom: 1rem;
+  color: #4a5568;
+}
+
+/* Code highlight styles */
+.highlight-wrapper {
+  position: relative !important;
+  margin: 1rem 0 !important;
+  background-color: #f8fafc !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  overflow: visible !important;
+}
+
+/* Language indicators for examples page */
+.highlight-wrapper[data-language]::before {
+  content: attr(data-language);
+  position: absolute !important;
+  top: 0.75rem !important;
+  right: 3.5rem !important;
+  background-color: rgba(0,0,0,0.03) !important;
+  color: #718096 !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.025em !important;
+  text-transform: uppercase !important;
+  padding: 0.25rem 0.5rem !important;
+  border-radius: 4px !important;
+  z-index: 90 !important;
+}
+
+.highlight {
+  margin: 0 !important;
+  background: transparent !important;
+}
+
+pre {
+  margin: 0 !important;
+  padding: 1.5rem !important;
+  padding-right: 3rem !important; /* Space for copy button */
+  background-color: transparent !important;
+  border: none !important;
+  overflow-x: auto !important;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+}
+
+code {
+  background: transparent !important;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace !important;
+}
+
+/* Copy button styles */
+.manual-copy-btn {
+  position: absolute !important;
+  top: 0.75rem !important;
+  right: 0.75rem !important;
+  background: white !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 4px !important;
+  padding: 0.4rem !important;
+  cursor: pointer !important;
+  color: #718096 !important;
+  opacity: 0.9 !important;
+  transition: all 0.2s ease !important;
+  z-index: 100 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 30px !important;
+  height: 30px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.manual-copy-btn svg {
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.manual-copy-btn:hover {
+  background-color: #f7fafc !important;
+  opacity: 1 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.manual-copy-btn.copied {
+  color: #38a169 !important;
+  border-color: #38a169 !important;
+  opacity: 1 !important;
+  background-color: #f0fff4 !important;
+}
+
+/* Syntax highlighting for Rust code */
+.highlight .k,
+.highlight .kd,
+.highlight .kw {
+  color: #5931e8 !important;
+  font-weight: 500 !important;
+}
+
+.highlight .nf,
+.highlight .fn {
+  color: #5480a6 !important;
+}
+
+.highlight .s,
+.highlight .s1,
+.highlight .s2 {
+  color: #0b8235 !important;
+}
+
+.highlight .c,
+.highlight .c1,
+.highlight .cm {
+  color: #6a737d !important;
+  font-style: italic !important;
+}
+
+.highlight .o {
+  color: #24292e !important;
+}
+
+.highlight .mi,
+.highlight .mf {
+  color: #0550ae !important;
+}
+
+/* Additional Rust specific classes */
+.highlight .nx.use { color: #0033b3 !important; }
+.highlight .nx.std { color: #0033b3 !important; }
+.highlight .nx.sync { color: #0033b3 !important; }
+.highlight .nx.Arc { color: #0033b3 !important; }
+.highlight .nx.String { color: #0033b3 !important; }
+.highlight .nx.TextMessage { color: #0033b3 !important; }
+.highlight .nx.Router { color: #0033b3 !important; }
+.highlight .nx.Message { color: #0033b3 !important; }
+.highlight .nx.Handle { color: #0033b3 !important; }
+
+/* Make sure the code blocks fit the page properly */
+.docs-container-page .highlight-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
