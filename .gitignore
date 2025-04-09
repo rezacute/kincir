@@ -20,7 +20,14 @@ Cargo.lock
 
 # Generated documentation
 /doc/
-/docs/
+# Allow docs directory for Jekyll site
+# /docs/
+# But ignore generated files inside docs
+/docs/_site/
+/docs/vendor/
+/docs/.jekyll-cache/
+/docs/.sass-cache/
+/docs/.bundle/
 
 # Test coverage
 /coverage/

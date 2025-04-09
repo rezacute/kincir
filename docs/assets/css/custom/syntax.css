@@ -1,0 +1,184 @@
+/* Syntax Highlighting for Code Blocks */
+.highlight {
+  margin: 0;
+  background: #f8fafc;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.highlight pre {
+  margin: 0;
+  padding: 1.5rem;
+  overflow-x: auto;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  border: none;
+  background: transparent;
+}
+
+.highlight code {
+  background: transparent;
+  font-family: inherit;
+  padding: 0;
+}
+
+/* Ensure the figure element does not have its own background */
+figure.highlight {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  margin: 0;
+}
+
+/* Generic text styling */
+.highlight .err { color: #000000; }
+.highlight .g { color: #000000; }
+.highlight .l { color: #000000; }
+.highlight .n { color: #000000; }
+.highlight .x { color: #000000; }
+.highlight .p { color: #000000; }
+
+/* Keywords */
+.highlight .k, .highlight .kd, .highlight .kn, .highlight .kp, .highlight .kr, .highlight .kt { 
+  color: #5931e8; 
+  font-weight: 500;
+}
+
+/* Names and identifiers */
+.highlight .nn { color: #0033b3; } /* namespace */
+.highlight .nc { color: #0033b3; } /* class name */
+.highlight .no { color: #333333; } /* constant name */
+.highlight .ni { color: #333333; } /* entity name */
+.highlight .ne { color: #5480a6; } /* name.exception */
+.highlight .nf { color: #5480a6; } /* function name */
+.highlight .nl { color: #333333; } /* label name */
+.highlight .na { color: #333333; } /* attribute name */
+.highlight .nb { color: #0086b3; } /* built-in name */
+.highlight .bp { color: #333333; } /* builtin pseudo */
+.highlight .nt { color: #0033b3; } /* tag name */
+.highlight .py { color: #5480a6; } /* property name */
+.highlight .nv { color: #333333; } /* variable name */
+.highlight .vc, .highlight .vg, .highlight .vi { color: #333333; } /* variable variants */
+
+/* Literals */
+.highlight .s, .highlight .sb, .highlight .sc, .highlight .sd, .highlight .s1, .highlight .s2 { 
+  color: #008000; 
+}
+.highlight .sr, .highlight .sh, .highlight .sx, .highlight .si, .highlight .se { color: #008000; }
+.highlight .m, .highlight .mb, .highlight .mf, .highlight .mh, .highlight .mi, .highlight .mo, .highlight .il { 
+  color: #0000ff; 
+}
+
+/* Comments */
+.highlight .c, .highlight .cm, .highlight .c1, .highlight .ch, .highlight .cs { 
+  color: #8a8a8a;
+  font-style: italic;
+}
+
+/* Special Rust-specific selectors */
+.language-rust .highlight .k { color: #5931e8; }
+.language-rust .highlight .kd { color: #5931e8; }
+.language-rust .highlight .fn { color: #5480a6; }
+.language-rust .highlight .nd { color: #0033b3; } /* decorator */
+.language-rust .highlight .nf { color: #5480a6; }
+.language-rust .highlight .nb { color: #0086b3; }
+.language-rust .highlight .bp { color: #333333; }
+.language-rust .highlight .nc { color: #0033b3; }
+
+/* Custom classes for Rust specific elements */
+.language-rust .use { color: #0033b3; }
+.language-rust .struct { color: #5931e8; }
+.language-rust .let { color: #5931e8; }
+.language-rust .mut { color: #5931e8; }
+.language-rust .fn { color: #5480a6; }
+.language-rust .self { color: #5931e8; }
+.language-rust .prelude { color: #0086b3; }
+
+/* Extra Rust element selectors */
+code.language-rust .kw { color: #5931e8; }
+code.language-rust .fn { color: #5480a6; }
+code.language-rust .str { color: #008000; }
+code.language-rust .num { color: #0000ff; }
+code.language-rust .com { color: #8a8a8a; }
+code.language-rust .ident { color: #333333; }
+code.language-rust .macro { color: #0033b3; }
+code.language-rust .lifetime { color: #6f42c1; }
+
+/* Improve the display of examples */
+.example-item {
+  margin-bottom: 2.5rem;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.example-item h3 {
+  margin: 0;
+  padding: 1.25rem;
+  background: #f3f6f9;
+  color: #2d3748;
+  font-size: 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.example-item .example-content {
+  padding: 1.25rem;
+}
+
+.example-item .example-content p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #4a5568;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Fix table borders and spacing */
+.example-content table {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.example-content table td {
+  border: none;
+  padding: 0;
+}
+
+/* Ensure code blocks in example content have proper spacing */
+.example-content .highlight {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  border: none;
+}
+
+.examples-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.examples-container h1 {
+  margin-bottom: 1rem;
+  color: #2d3748;
+  font-size: 2rem;
+}
+
+.examples-container .intro-text {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #4a5568;
+  margin-bottom: 2rem;
+}
+
+.examples-container h2 {
+  font-size: 1.5rem;
+  color: #2d3748;
+  margin-top: 2.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+} 
