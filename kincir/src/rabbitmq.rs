@@ -299,7 +299,7 @@ impl super::Subscriber for RabbitMQSubscriber {
         Ok(())
     }
 
-    async fn receive(&self) -> Result<Message, Self::Error> {
+    async fn receive(&mut self) -> Result<Message, Self::Error> { // Changed to &mut self
         self.logger.info("Waiting to receive message").await;
 
         let topic_guard = self.topic.lock().await;
@@ -386,7 +386,7 @@ impl super::Subscriber for RabbitMQSubscriber {
         Ok(())
     }
 
-    async fn receive(&self) -> Result<Message, Self::Error> {
+    async fn receive(&mut self) -> Result<Message, Self::Error> { // Changed to &mut self
         let topic_guard = self.topic.lock().await;
         let _topic = topic_guard.as_ref().ok_or_else(|| {
             Box::new(RabbitMQError::RabbitMQ(lapin::Error::InvalidChannelState(

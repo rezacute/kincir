@@ -151,12 +151,13 @@ pub trait Subscriber {
     async fn subscribe(&self, topic: &str) -> Result<(), Self::Error>;
 
     /// Receives the next available message from the subscribed topic.
-    async fn receive(&self) -> Result<Message, Self::Error>;
+    async fn receive(&mut self) -> Result<Message, Self::Error>;
 }
 
 pub mod kafka;
 pub mod rabbitmq;
 pub mod router;
+pub mod mqtt;
 
 #[cfg(feature = "logging")]
 pub mod logging;
@@ -167,6 +168,7 @@ pub mod protobuf;
 // Re-export commonly used types
 #[cfg(feature = "logging")]
 pub use logging::{Logger, NoOpLogger, StdLogger};
+pub use mqtt::{MQTTPublisher, MQTTSubscriber};
 #[cfg(feature = "protobuf")]
 pub use protobuf::{MessageCodec, ProtobufCodec};
 pub use router::HandlerFunc;

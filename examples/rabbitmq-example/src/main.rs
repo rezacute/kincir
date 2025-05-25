@@ -14,7 +14,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // Example configuration for RabbitMQ
     let publisher = Arc::new(RabbitMQPublisher::new(&rabbitmq_url).await?);
-    let subscriber = Arc::new(RabbitMQSubscriber::new(&rabbitmq_url).await?);
+    // subscriber needs to be Arc<Mutex<dyn Subscriber>> for the Router
+    let rabbitmq_subscriber = RabbitMQSubscriber::new(&rabbitmq_url).await?;
+    let subscriber = Arc::new(tokio::sync::Mutex::new(rabbitmq_subscriber));
 
     // Define message handler
     let handler: HandlerFunc = Arc::new(|msg: Message| {
