@@ -92,7 +92,6 @@ impl RabbitMQPublisher {
         self.logger = logger;
         self
     }
-
 }
 
 #[cfg(feature = "logging")]
@@ -149,7 +148,6 @@ impl super::Publisher for RabbitMQPublisher {
         Ok(())
     }
 }
-
 
 #[cfg(not(feature = "logging"))]
 #[async_trait]
@@ -213,7 +211,6 @@ impl RabbitMQSubscriber {
     /// * `uri` - The RabbitMQ connection URI (e.g., "amqp://localhost:5672")
     #[cfg(not(feature = "logging"))]
 
-
     pub async fn new(uri: &str) -> Result<Self, RabbitMQError> {
         let connection = Connection::connect(uri, ConnectionProperties::default())
             .await
@@ -249,7 +246,6 @@ impl RabbitMQSubscriber {
         })
     }
 
-
     /// Creates a new RabbitMQSubscriber instance with logging.
     ///
     /// # Arguments
@@ -271,7 +267,6 @@ impl RabbitMQSubscriber {
             logger,
         })
     }
-
 
     /// Sets a logger for the subscriber (only available with the "logging" feature).
     #[cfg(feature = "logging")]
@@ -327,7 +322,6 @@ impl super::Subscriber for RabbitMQSubscriber {
 
         Ok(())
     }
-
 
     async fn receive(&mut self) -> Result<Message, Self::Error> {
         // Changed to &mut self

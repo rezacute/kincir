@@ -229,7 +229,6 @@ impl super::Subscriber for KafkaSubscriber {
         Ok(())
     }
 
-
     async fn receive(&mut self) -> Result<Message, Self::Error> {
         // Changed to &mut self
 
@@ -241,7 +240,6 @@ impl super::Subscriber for KafkaSubscriber {
                     .info(&format!("Received message {}", message.uuid))
                     .await;
                 Ok(message)
-
             }
             None => {
                 self.logger.error("Channel closed").await;
@@ -266,6 +264,5 @@ impl super::Subscriber for KafkaSubscriber {
             Some(message) => Ok(message),
             None => Err(Box::new(KafkaError::ChannelReceive)),
         }
-
     }
 }

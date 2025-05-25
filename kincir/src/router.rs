@@ -156,9 +156,7 @@ pub type HandlerFunc = Arc<
 ///     router.run().await
 /// # }
 /// # }
-
 use tokio::sync::Mutex; // Add this import
-
 
 #[cfg(feature = "logging")]
 pub struct Router {
@@ -320,7 +318,6 @@ impl Router {
     /// 3. Process messages using the handler
     /// 4. Publish processed messages to the output topic
     pub async fn run(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
-
         // Lock the subscriber to call subscribe
         let subscriber_guard_for_subscribe = self.subscriber.lock().await; // Removed mut
         subscriber_guard_for_subscribe
