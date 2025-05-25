@@ -229,7 +229,9 @@ impl super::Subscriber for KafkaSubscriber {
         Ok(())
     }
 
-    async fn receive(&self) -> Result<Message, Self::Error> {
+    async fn receive(&mut self) -> Result<Message, Self::Error> {
+        // Changed to &mut self
+
         self.logger.info("Waiting to receive message").await;
         let mut rx_guard = self.rx.lock().await;
         match rx_guard.recv().await {

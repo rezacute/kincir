@@ -45,7 +45,8 @@ mod tests {
     #[ignore]
     async fn test_rabbitmq_publish_subscribe() {
         let publisher = RabbitMQPublisher::new("amqp://localhost:5672").await.unwrap();
-        let subscriber = RabbitMQSubscriber::new("amqp://localhost:5672").await.unwrap();
+        // Changed to mut subscriber as receive() now takes &mut self
+        let mut subscriber = RabbitMQSubscriber::new("amqp://localhost:5672").await.unwrap();
         
         let test_queue = "test-queue";
         let test_message = Message::new(b"integration test".to_vec())

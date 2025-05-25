@@ -45,7 +45,8 @@ mod tests {
     #[ignore]
     async fn test_kafka_publish_subscribe() {
         let publisher = KafkaPublisher::new("localhost:9092").await.unwrap();
-        let subscriber = KafkaSubscriber::new("localhost:9092", "test-group").await.unwrap();
+        // Changed to mut subscriber as receive() now takes &mut self
+        let mut subscriber = KafkaSubscriber::new("localhost:9092", "test-group").await.unwrap();
         
         let test_topic = "test-topic";
         let test_message = Message::new(b"integration test".to_vec())

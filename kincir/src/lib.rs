@@ -42,12 +42,13 @@
 //! # {
 //! // With logging (when "logging" feature is enabled)
 //! use kincir::logging::{Logger, StdLogger};
+//! use tokio::sync::Mutex;
 //! let logger = Arc::new(StdLogger::new(true, true));
 //! let router = Router::new(
 //!     logger,
 //!     "input-queue".to_string(),
 //!     "output-queue".to_string(),
-//!     subscriber.clone(),
+//!     Arc::new(Mutex::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?)),
 //!     publisher.clone(),
 //!     handler.clone(),
 //! );
@@ -57,10 +58,12 @@
 //! # #[cfg(not(feature = "logging"))]
 //! # {
 //! // Without logging (when "logging" feature is disabled)
+//! use tokio::sync::Mutex;
+//! let subscriber_instance = RabbitMQSubscriber::new("amqp://localhost:5672").await?;
 //! let router = Router::new(
 //!     "input-queue".to_string(),
 //!     "output-queue".to_string(),
-//!     subscriber,
+//!     Arc::new(Mutex::new(subscriber_instance)),
 //!     publisher,
 //!     handler,
 //! );
@@ -151,10 +154,11 @@ pub trait Subscriber {
     async fn subscribe(&self, topic: &str) -> Result<(), Self::Error>;
 
     /// Receives the next available message from the subscribed topic.
-    async fn receive(&self) -> Result<Message, Self::Error>;
+    async fn receive(&mut self) -> Result<Message, Self::Error>;
 }
 
 pub mod kafka;
+pub mod mqtt;
 pub mod rabbitmq;
 pub mod router;
 
@@ -167,6 +171,9 @@ pub mod protobuf;
 // Re-export commonly used types
 #[cfg(feature = "logging")]
 pub use logging::{Logger, NoOpLogger, StdLogger};
+
+pub use mqtt::{MQTTPublisher, MQTTSubscriber};
+
 #[cfg(feature = "protobuf")]
 pub use protobuf::{MessageCodec, ProtobufCodec};
 pub use router::HandlerFunc;
