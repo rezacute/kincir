@@ -229,8 +229,10 @@ impl super::Subscriber for KafkaSubscriber {
         Ok(())
     }
 
+
     async fn receive(&mut self) -> Result<Message, Self::Error> {
         // Changed to &mut self
+
         self.logger.info("Waiting to receive message").await;
         let mut rx_guard = self.rx.lock().await;
         match rx_guard.recv().await {
@@ -239,6 +241,7 @@ impl super::Subscriber for KafkaSubscriber {
                     .info(&format!("Received message {}", message.uuid))
                     .await;
                 Ok(message)
+
             }
             None => {
                 self.logger.error("Channel closed").await;
@@ -257,12 +260,12 @@ impl super::Subscriber for KafkaSubscriber {
         Ok(())
     }
 
-    async fn receive(&mut self) -> Result<Message, Self::Error> {
-        // Changed to &mut self
+    async fn receive(&self) -> Result<Message, Self::Error> {
         let mut rx_guard = self.rx.lock().await;
         match rx_guard.recv().await {
             Some(message) => Ok(message),
             None => Err(Box::new(KafkaError::ChannelReceive)),
         }
+
     }
 }

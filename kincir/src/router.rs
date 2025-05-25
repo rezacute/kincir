@@ -156,7 +156,9 @@ pub type HandlerFunc = Arc<
 ///     router.run().await
 /// # }
 /// # }
+
 use tokio::sync::Mutex; // Add this import
+
 
 #[cfg(feature = "logging")]
 pub struct Router {
@@ -173,8 +175,10 @@ pub struct Router {
 pub struct Router {
     consume_topic: String,
     publish_topic: String,
+
     subscriber:
         Arc<Mutex<dyn crate::Subscriber<Error = Box<dyn Error + Send + Sync>> + Send + Sync>>,
+
     publisher: Arc<dyn crate::Publisher<Error = Box<dyn Error + Send + Sync>>>,
     handler: HandlerFunc,
 }
@@ -283,15 +287,19 @@ impl Router {
     ///
     /// * `consume_topic` - The topic/queue to consume messages from
     /// * `publish_topic` - The topic/queue to publish processed messages to
+
     /// * `subscriber` - The subscriber implementation (wrapped in Arc<Mutex<...>>)
+
     /// * `publisher` - The publisher implementation
     /// * `handler` - The message processing function
     pub fn new(
         consume_topic: String,
         publish_topic: String,
+
         subscriber: Arc<
             Mutex<dyn crate::Subscriber<Error = Box<dyn Error + Send + Sync>> + Send + Sync>,
         >,
+
         publisher: Arc<dyn crate::Publisher<Error = Box<dyn Error + Send + Sync>>>,
         handler: HandlerFunc,
     ) -> Self {
@@ -312,6 +320,7 @@ impl Router {
     /// 3. Process messages using the handler
     /// 4. Publish processed messages to the output topic
     pub async fn run(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
+
         // Lock the subscriber to call subscribe
         let subscriber_guard_for_subscribe = self.subscriber.lock().await; // Removed mut
         subscriber_guard_for_subscribe
@@ -325,6 +334,7 @@ impl Router {
             match subscriber_guard.receive().await {
                 Ok(msg) => {
                     // Similar to the logging version, lock is held during handler.
+
                     match (self.handler)(msg).await {
                         Ok(processed_msgs) => {
                             if !processed_msgs.is_empty() {

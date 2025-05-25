@@ -168,7 +168,9 @@ pub mod protobuf;
 // Re-export commonly used types
 #[cfg(feature = "logging")]
 pub use logging::{Logger, NoOpLogger, StdLogger};
+
 pub use mqtt::{MQTTPublisher, MQTTSubscriber};
+
 #[cfg(feature = "protobuf")]
 pub use protobuf::{MessageCodec, ProtobufCodec};
 pub use router::HandlerFunc;
