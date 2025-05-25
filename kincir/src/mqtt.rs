@@ -10,7 +10,7 @@ use tokio::sync::mpsc;
 #[cfg(feature = "logging")]
 use tracing::{debug, error, info, warn};
 
-use crate::core::{MessageHandler, Message, Publisher, Subscriber};
+use crate::core::{Message, MessageHandler, Publisher, Subscriber};
 
 #[derive(Error, Debug)]
 pub enum MQTTError {
@@ -33,7 +33,7 @@ pub struct MQTTPublisher {
     topic: String,
     // EventLoop needs to be stored and polled
     // We'll spawn a task to poll it.
-    // event_loop: rumqttc::EventLoop, 
+    // event_loop: rumqttc::EventLoop,
 }
 
 impl MQTTPublisher {
@@ -63,7 +63,10 @@ impl MQTTPublisher {
                 });
 
                 #[cfg(feature = "logging")]
-                info!("Successfully connected to MQTT broker for publisher: {}", broker_url);
+                info!(
+                    "Successfully connected to MQTT broker for publisher: {}",
+                    broker_url
+                );
                 Ok(MQTTPublisher {
                     client,
                     topic: topic.to_string(),
@@ -86,7 +89,11 @@ impl Publisher for MQTTPublisher {
     // or assert it matches. For simplicity, ignoring.
     // The trait also expects Vec<Message>, current impl takes one generic message.
     // We'll adapt to take Vec<crate::Message> and publish them one by one.
-    async fn publish(&self, _topic: &str, messages: Vec<crate::Message>) -> Result<(), Box<dyn Error>> {
+    async fn publish(
+        &self,
+        _topic: &str,
+        messages: Vec<crate::Message>,
+    ) -> Result<(), Box<dyn Error>> {
         for message in messages {
             // Assuming crate::Message payload is already Vec<u8>
             // If kincir::Message used serde for payload, we'd serialize here.
@@ -107,14 +114,29 @@ impl Publisher for MQTTPublisher {
             // The `MqttPublisher::publish` signature was `<T: Message + Sync>`.
             // The trait is `messages: Vec<Message>`. So, `message.payload` is the correct thing to publish.
 
-            match self.client.publish(&self.topic, QoS::AtLeastOnce, false, message.payload.as_slice()).await {
+            match self
+                .client
+                .publish(
+                    &self.topic,
+                    QoS::AtLeastOnce,
+                    false,
+                    message.payload.as_slice(),
+                )
+                .await
+            {
                 Ok(_) => {
                     #[cfg(feature = "logging")]
-                    debug!("Successfully published message (UUID: {}) to topic: {}", message.uuid, self.topic);
+                    debug!(
+                        "Successfully published message (UUID: {}) to topic: {}",
+                        message.uuid, self.topic
+                    );
                 }
                 Err(e) => {
                     #[cfg(feature = "logging")]
-                    error!("Failed to publish message (UUID: {}) to topic {}: {}", message.uuid, self.topic, e);
+                    error!(
+                        "Failed to publish message (UUID: {}) to topic {}: {}",
+                        message.uuid, self.topic, e
+                    );
                     // Return on first error
                     return Err(Box::new(MQTTError::PublishError(e.to_string())));
                 }
@@ -143,7 +165,10 @@ impl MQTTSubscriber {
         match AsyncClient::new(mqtt_options, 10) {
             Ok((client, event_loop)) => {
                 #[cfg(feature = "logging")]
-                info!("MQTTSubscriber: Successfully connected to MQTT broker: {} for topic: {}", broker_url, topic);
+                info!(
+                    "MQTTSubscriber: Successfully connected to MQTT broker: {} for topic: {}",
+                    broker_url, topic
+                );
                 Ok(MQTTSubscriber {
                     client,
                     event_loop,
@@ -152,7 +177,10 @@ impl MQTTSubscriber {
             }
             Err(e) => {
                 #[cfg(feature = "logging")]
-                error!("MQTTSubscriber: Failed to connect to MQTT broker {}: {}", broker_url, e);
+                error!(
+                    "MQTTSubscriber: Failed to connect to MQTT broker {}: {}",
+                    broker_url, e
+                );
                 Err(MQTTError::ConnectionError(e.to_string()))
             }
         }
@@ -193,7 +221,9 @@ impl Subscriber for MQTTSubscriber {
         loop {
             match self.event_loop.poll().await {
                 Ok(notification) => {
-                    if let rumqttc::Event::Incoming(rumqttc::Packet::Publish(publish)) = notification {
+                    if let rumqttc::Event::Incoming(rumqttc::Packet::Publish(publish)) =
+                        notification
+                    {
                         // Deserialize directly into kincir::Message
                         // The payload from rumqttc is Vec<u8>.
                         // kincir::Message expects this payload directly.
@@ -202,7 +232,7 @@ impl Subscriber for MQTTSubscriber {
                         // We'll create a new kincir::Message, using the MQTT payload as its payload.
                         // UUID will be generated. Metadata will be empty for now, or we could
                         // potentially extract some from MQTT properties if available and desired.
-                        
+
                         #[cfg(feature = "logging")]
                         debug!("Received raw MQTT message on topic: {}", publish.topic);
 
@@ -216,7 +246,7 @@ impl Subscriber for MQTTSubscriber {
                             payload: publish.payload.to_vec(),
                             metadata: std::collections::HashMap::new(), // Empty metadata for now
                         };
-                        
+
                         // The old code used `serde_json::from_slice::<T>(&publish.payload)`
                         // where T was `kincir::Message`. This implies the whole kincir message
                         // (UUID, payload, metadata) was expected to be in the MQTT payload.
