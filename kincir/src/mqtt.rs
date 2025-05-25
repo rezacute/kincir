@@ -121,28 +121,75 @@ impl Publisher for MQTTPublisher {
 
 // Forward declaration for Message if not already in scope
 // use crate::core::Message;
+use uuid::Uuid; // Ensure Uuid is imported
 
 pub struct MQTTSubscriber {
-    client: AsyncClient,
-    event_loop: rumqttc::EventLoop,
-    topic: String, // Topic subscribed to
+    client: AsyncClient, // Retain client for potential re-subscribe logic or other control operations
+    topic: String,
+    message_rx: mpsc::Receiver<Result<crate::Message, MQTTError>>,
 }
 
 impl MQTTSubscriber {
-    pub fn new(broker_url: &str, topic: &str) -> Result<Self, MQTTError> {
-        let client_id = format!("kincir-mqtt-subscriber-{}", uuid::Uuid::new_v4());
+    pub fn new(broker_url: &str, topic_str: &str) -> Result<Self, MQTTError> {
+        let client_id = format!("kincir-mqtt-subscriber-{}", Uuid::new_v4());
         let mut mqtt_options = MqttOptions::new(client_id, broker_url, 1883);
         mqtt_options.set_keep_alive(std::time::Duration::from_secs(5));
 
-        let (client, event_loop) = AsyncClient::new(mqtt_options, 10); // Direct assignment
+        let (client, mut event_loop) = AsyncClient::new(mqtt_options, 10);
+        let (message_tx, message_rx) = mpsc::channel(100); // Buffer size can be configured
+
+        // Spawned task to handle the event loop and forward messages/errors
+        tokio::spawn(async move {
+            #[cfg(feature = "logging")]
+            info!("MQTT EventLoop Task: Started for topic processing.");
+
+            loop {
+                match event_loop.poll().await {
+                    Ok(rumqttc::Event::Incoming(rumqttc::Packet::Publish(publish))) => {
+                        let k_message = crate::Message {
+                            uuid: Uuid::new_v4().to_string(),
+                            payload: publish.payload.to_vec(),
+                            metadata: std::collections::HashMap::new(),
+                        };
+                        if message_tx.send(Ok(k_message)).await.is_err() {
+                            #[cfg(feature = "logging")]
+                            error!("MQTT EventLoop Task: Failed to send message to channel. Receiver dropped.");
+                            break; // Exit loop if receiver is gone
+                        }
+                    }
+                    Ok(rumqttc::Event::Incoming(rumqttc::Packet::Disconnect)) => {
+                        #[cfg(feature = "logging")]
+                        warn!("MQTT EventLoop Task: MQTT Disconnected. Sending error and exiting.");
+                        // Attempt to send error, ignore if receiver is already dropped
+                        let _ = message_tx.send(Err(MQTTError::ConnectionError("MQTT Disconnected".to_string()))).await;
+                        break; // Exit loop on disconnect
+                    }
+                    Ok(event) => {
+                        #[cfg(feature = "logging")]
+                        debug!("MQTT EventLoop Task: Received event: {:?}", event);
+                        // Handle other events like ConnAck, PubAck, SubAck, PingResp etc. if necessary
+                        // For now, just logging them.
+                    }
+                    Err(e) => {
+                        #[cfg(feature = "logging")]
+                        error!("MQTT EventLoop Task: MQTT EventLoop error: {}. Sending error and exiting.", e);
+                        // Attempt to send error, ignore if receiver is already dropped
+                        let _ = message_tx.send(Err(MQTTError::ReceiveError(e.to_string()))).await;
+                        break; // Exit loop on error
+                    }
+                }
+            }
+            #[cfg(feature = "logging")]
+            info!("MQTT EventLoop Task: Exiting.");
+        });
 
         #[cfg(feature = "logging")]
-        info!("MQTTSubscriber: Initialized for broker_url: {}, topic: {}. Event loop will be polled by receive method.", broker_url, topic);
-        // Note: Subscriber's event loop is polled in receive()
+        info!("MQTTSubscriber: Created for broker_url: {}, topic: {}", broker_url, topic_str);
+        
         Ok(MQTTSubscriber {
             client,
-            event_loop, // Store the event_loop to be polled in receive()
-            topic: topic.to_string(),
+            topic: topic_str.to_string(),
+            message_rx,
         })
     }
 }
@@ -156,28 +203,38 @@ impl Subscriber for MQTTSubscriber {
     async fn subscribe(&self, topic: &str) -> Result<(), Self::Error> {
         if topic != self.topic {
             let err_msg = format!(
-                "Subscription topic mismatch: expected '{}', got '{}'",
-                self.topic, topic
+                "Subscription topic mismatch: expected '{}', got '{}'. Current subscriber is for topic '{}'.",
+                self.topic, topic, self.topic
             );
             #[cfg(feature = "logging")]
             error!("{}", err_msg);
+            // It's important that an instance of MQTTSubscriber is tied to a single topic from its MPSC queue.
+            // If the user wants to subscribe to a different topic, they should create a new MQTTSubscriber.
+            // So, this check is crucial.
             return Err(Box::new(MQTTError::SubscribeError(err_msg)));
         }
 
-        let client = self.client.clone(); // Clone the client
-        let topic_to_subscribe = self.topic.clone(); // Clone the topic string
+        // The spawned task in `new` is already polling the event loop associated with `self.client`.
+        // When `self.client.subscribe` is called here and succeeds, the event loop will
+        // start receiving messages for this subscription, which will then be processed by the spawned task.
 
-        client // Use the cloned client
-            .subscribe(&topic_to_subscribe, QoS::AtLeastOnce) // Use cloned topic
+        let client_clone = self.client.clone();
+        let topic_to_subscribe = self.topic.clone(); // Use self.topic, as this instance is fixed to it.
+
+        #[cfg(feature = "logging")]
+        info!("MQTTSubscriber::subscribe - Attempting to subscribe client to topic: {}", topic_to_subscribe);
+
+        client_clone
+            .subscribe(&topic_to_subscribe, QoS::AtLeastOnce)
             .await
             .map_err(|e| {
                 #[cfg(feature = "logging")]
-                error!("Failed to subscribe to MQTT topic {}: {}", topic_to_subscribe, e);
+                error!("MQTTSubscriber::subscribe - Failed to subscribe to MQTT topic {}: {}", topic_to_subscribe, e);
                 Box::new(MQTTError::SubscribeError(e.to_string())) as Self::Error
             })?;
 
         #[cfg(feature = "logging")]
-        info!("Successfully subscribed to MQTT topic: {}", topic_to_subscribe);
+        info!("MQTTSubscriber::subscribe - Successfully sent SUBSCRIBE packet for topic: {}", topic_to_subscribe);
         Ok(())
     }
 
@@ -185,52 +242,22 @@ impl Subscriber for MQTTSubscriber {
     // NOTE: This requires &mut self due to event_loop.poll().
     // This assumes the Subscriber trait in lib.rs is changed to `receive(&mut self)`.
     async fn receive(&mut self) -> Result<crate::Message, Self::Error> {
-        loop {
-            match self.event_loop.poll().await {
-                Ok(notification) => {
-                    if let rumqttc::Event::Incoming(rumqttc::Packet::Publish(publish)) = notification {
-                        // Deserialize directly into kincir::Message
-                        // The payload from rumqttc is Vec<u8>.
-                        // kincir::Message expects this payload directly.
-                        // We need a UUID and metadata. The MQTT message itself doesn't carry
-                        // a separate UUID or kincir metadata in its standard structure.
-                        // We'll create a new kincir::Message, using the MQTT payload as its payload.
-                        // UUID will be generated. Metadata will be empty for now, or we could
-                        // potentially extract some from MQTT properties if available and desired.
-                        
-                        #[cfg(feature = "logging")]
-                        debug!("Received raw MQTT message on topic: {}", publish.topic);
-
-                        // Here, we assume the payload *is* the kincir::Message payload, not a serialized kincir::Message.
-                        // If the publisher sends a serialized kincir::Message (e.g. JSON of the kincir::Message struct),
-                        // then we would deserialize `kincir::Message` from `publish.payload`.
-                        // However, the MQTTPublisher was just changed to send `message.payload`.
-                        // This means the application bytes are directly in `publish.payload`.
-                        let k_message = crate::Message {
-                            uuid: uuid::Uuid::new_v4().to_string(), // Generate new UUID for this received message
-                            payload: publish.payload.to_vec(),
-                            metadata: std::collections::HashMap::new(), // Empty metadata for now
-                        };
-                        
-                        // The old code used `serde_json::from_slice::<T>(&publish.payload)`
-                        // where T was `kincir::Message`. This implies the whole kincir message
-                        // (UUID, payload, metadata) was expected to be in the MQTT payload.
-                        // This contradicts the publisher change.
-                        // For now, let's assume the MQTT payload IS the application data.
-                        return Ok(k_message);
-                    }
-                    // Handle other notifications if necessary (e.g., Disconnect, Reconnect)
-                    #[cfg(feature = "logging")]
-                    debug!("Received other MQTT notification: {:?}", notification);
-                }
-                Err(e) => {
-                    #[cfg(feature = "logging")]
-                    error!("Error polling MQTT event loop: {}", e);
-                    // Depending on the error, may need to break or attempt reconnection.
-                    // For now, return an error.
-                    return Err(Box::new(MQTTError::ReceiveError(e.to_string()))); // This still returns Box<dyn Error>, needs Self::Error
-                                                                                // The MQTTError enum itself can be boxed into Self::Error.
-                }
+        match self.message_rx.recv().await {
+            Some(Ok(message)) => {
+                #[cfg(feature = "logging")]
+                debug!("MQTTSubscriber::receive - Received message from channel: {}", message.uuid);
+                Ok(message)
+            }
+            Some(Err(mqtt_error)) => {
+                #[cfg(feature = "logging")]
+                error!("MQTTSubscriber::receive - Received error from event loop task: {:?}", mqtt_error);
+                Err(Box::new(mqtt_error) as Self::Error)
+            }
+            None => {
+                // Channel has been closed. This implies the event loop task has terminated.
+                #[cfg(feature = "logging")]
+                warn!("MQTTSubscriber::receive - Message channel closed. Event loop task likely terminated.");
+                Err(Box::new(MQTTError::ReceiveError("Message channel closed. Event loop task terminated.".to_string())) as Self::Error)
             }
         }
     }
