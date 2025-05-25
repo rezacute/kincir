@@ -35,19 +35,20 @@
 //!
 //!     // Set up router with RabbitMQ backend
 //!     let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
-//!     let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
+//!     let subscriber_instance = RabbitMQSubscriber::new("amqp://localhost:5672").await?;
 //!
 //! # // Create the router differently based on feature flags
 //! # #[cfg(feature = "logging")]
 //! # {
 //!     // With the "logging" feature enabled, include a logger
 //! # use kincir::logging::Logger;
+//! # use tokio::sync::Mutex;
 //! # let logger = Arc::new(kincir::logging::StdLogger::new(true, true));
 //!     let router = Router::new(
 //!         logger,
 //!         "input-queue".to_string(),
 //!         "output-queue".to_string(),
-//!         subscriber,
+//!         Arc::new(Mutex::new(subscriber_instance)),
 //!         publisher,
 //!         handler,
 //!     );
@@ -58,10 +59,11 @@
 //! # #[cfg(not(feature = "logging"))]
 //! # {
 //!     // Without the "logging" feature, don't include a logger
+//! # use tokio::sync::Mutex;
 //!     let router = Router::new(
 //!         "input-queue".to_string(),
 //!         "output-queue".to_string(),
-//!         subscriber,
+//!         Arc::new(Mutex::new(subscriber_instance)),
 //!         publisher,
 //!         handler,
 //!     );
@@ -121,19 +123,20 @@ pub type HandlerFunc = Arc<
 ///
 ///     // Set up router with RabbitMQ backend
 ///     let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
-///     let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
+///     let subscriber_instance = RabbitMQSubscriber::new("amqp://localhost:5672").await?;
 ///
 /// # // Create the router differently based on feature flags
 /// # #[cfg(feature = "logging")]
 /// # {
 ///     // With the "logging" feature enabled, include a logger
 /// # use kincir::logging::Logger;
+/// # use tokio::sync::Mutex;
 /// # let logger = Arc::new(kincir::logging::StdLogger::new(true, true));
 ///     let router = Router::new(
 ///         logger,
 ///         "input-queue".to_string(),
 ///         "output-queue".to_string(),
-///         subscriber,
+///         Arc::new(Mutex::new(subscriber_instance)),
 ///         publisher,
 ///         handler,
 ///     );
@@ -144,10 +147,11 @@ pub type HandlerFunc = Arc<
 /// # #[cfg(not(feature = "logging"))]
 /// # {
 ///     // Without the "logging" feature, don't include a logger
+/// # use tokio::sync::Mutex;
 ///     let router = Router::new(
 ///         "input-queue".to_string(),
 ///         "output-queue".to_string(),
-///         subscriber,
+///         Arc::new(Mutex::new(subscriber_instance)),
 ///         publisher,
 ///         handler,
 ///     );
