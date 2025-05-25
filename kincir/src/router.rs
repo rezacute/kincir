@@ -165,7 +165,8 @@ pub struct Router {
     logger: Arc<dyn Logger>,
     consume_topic: String,
     publish_topic: String,
-    subscriber: Arc<Mutex<dyn crate::Subscriber<Error = Box<dyn Error + Send + Sync>> + Send + Sync>>,
+    subscriber:
+        Arc<Mutex<dyn crate::Subscriber<Error = Box<dyn Error + Send + Sync>> + Send + Sync>>,
     publisher: Arc<dyn crate::Publisher<Error = Box<dyn Error + Send + Sync>>>,
     handler: HandlerFunc,
 }
@@ -174,7 +175,8 @@ pub struct Router {
 pub struct Router {
     consume_topic: String,
     publish_topic: String,
-    subscriber: Arc<Mutex<dyn crate::Subscriber<Error = Box<dyn Error + Send + Sync>> + Send + Sync>>,
+    subscriber:
+        Arc<Mutex<dyn crate::Subscriber<Error = Box<dyn Error + Send + Sync>> + Send + Sync>>,
     publisher: Arc<dyn crate::Publisher<Error = Box<dyn Error + Send + Sync>>>,
     handler: HandlerFunc,
 }
@@ -195,7 +197,9 @@ impl Router {
         logger: Arc<dyn Logger>,
         consume_topic: String,
         publish_topic: String,
-        subscriber: Arc<Mutex<dyn crate::Subscriber<Error = Box<dyn Error + Send + Sync>> + Send + Sync>>,
+        subscriber: Arc<
+            Mutex<dyn crate::Subscriber<Error = Box<dyn Error + Send + Sync>> + Send + Sync>,
+        >,
         publisher: Arc<dyn crate::Publisher<Error = Box<dyn Error + Send + Sync>>>,
         handler: HandlerFunc,
     ) -> Self {
@@ -220,7 +224,9 @@ impl Router {
         self.logger.info("Starting router...").await;
         // Lock the subscriber to call subscribe
         let subscriber_guard_for_subscribe = self.subscriber.lock().await; // Removed mut
-        subscriber_guard_for_subscribe.subscribe(&self.consume_topic).await?;
+        subscriber_guard_for_subscribe
+            .subscribe(&self.consume_topic)
+            .await?;
         drop(subscriber_guard_for_subscribe); // Release lock after subscribe
 
         loop {
@@ -285,7 +291,9 @@ impl Router {
     pub fn new(
         consume_topic: String,
         publish_topic: String,
-        subscriber: Arc<Mutex<dyn crate::Subscriber<Error = Box<dyn Error + Send + Sync>> + Send + Sync>>,
+        subscriber: Arc<
+            Mutex<dyn crate::Subscriber<Error = Box<dyn Error + Send + Sync>> + Send + Sync>,
+        >,
         publisher: Arc<dyn crate::Publisher<Error = Box<dyn Error + Send + Sync>>>,
         handler: HandlerFunc,
     ) -> Self {
@@ -308,7 +316,9 @@ impl Router {
     pub async fn run(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
         // Lock the subscriber to call subscribe
         let subscriber_guard_for_subscribe = self.subscriber.lock().await; // Removed mut
-        subscriber_guard_for_subscribe.subscribe(&self.consume_topic).await?;
+        subscriber_guard_for_subscribe
+            .subscribe(&self.consume_topic)
+            .await?;
         drop(subscriber_guard_for_subscribe); // Release lock after subscribe
 
         loop {
