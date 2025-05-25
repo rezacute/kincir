@@ -38,55 +38,50 @@ pub struct MQTTPublisher {
 
 impl MQTTPublisher {
     pub fn new(broker_url: &str, topic: &str) -> Result<Self, MQTTError> {
-        let mut mqtt_options = MqttOptions::new("rumqtt-publisher", broker_url, 1883);
+        let client_id = format!("kincir-mqtt-publisher-{}", uuid::Uuid::new_v4());
+        let mut mqtt_options = MqttOptions::new(client_id, broker_url, 1883);
         mqtt_options.set_keep_alive(std::time::Duration::from_secs(5));
 
-        match AsyncClient::new(mqtt_options, 10) {
-            Ok((client, mut eventloop)) => {
-                // Spawn a task to poll the event loop for the publisher
-                tokio::spawn(async move {
-                    loop {
-                        match eventloop.poll().await {
-                            Ok(notification) => {
-                                #[cfg(feature = "logging")]
-                                debug!("Publisher EventLoop notification: {:?}", notification);
-                                // Handle specific notifications if needed, e.g., disconnections
-                            }
-                            Err(e) => {
-                                #[cfg(feature = "logging")]
-                                error!("Publisher EventLoop error: {}", e);
-                                // Potentially break the loop or implement reconnection logic
-                                break;
-                            }
-                        }
-                    }
-                });
+        let (client, mut eventloop) = AsyncClient::new(mqtt_options, 10); // Direct assignment
 
-                #[cfg(feature = "logging")]
-                info!("Successfully connected to MQTT broker for publisher: {}", broker_url);
-                Ok(MQTTPublisher {
-                    client,
-                    topic: topic.to_string(),
-                })
+        tokio::spawn(async move {
+            loop {
+                match eventloop.poll().await {
+                    Ok(notification) => {
+                        #[cfg(feature = "logging")]
+                        debug!("Publisher EventLoop notification: {:?}", notification);
+                        // Handle specific notifications if needed, e.g., disconnections
+                    }
+                    Err(e) => {
+                        #[cfg(feature = "logging")]
+                        error!("Publisher EventLoop error: {}", e);
+                        // Potentially break the loop or implement reconnection logic
+                        break;
+                    }
+                }
             }
-            Err(e) => {
-                #[cfg(feature = "logging")]
-                error!("Failed to connect to MQTT broker for publisher: {}", e);
-                Err(MQTTError::ConnectionError(e.to_string()))
-            }
-        }
+        });
+
+        #[cfg(feature = "logging")]
+        info!("MQTTPublisher: Initialized for broker_url: {}, topic: {}", broker_url, topic);
+        Ok(MQTTPublisher {
+            client,
+            topic: topic.to_string(),
+        })
     }
 }
 
 #[async_trait]
 impl Publisher for MQTTPublisher {
+    type Error = Box<dyn std::error::Error + Send + Sync>;
+
     // The trait defines `topic: &str` and `messages: Vec<Message>`.
     // Current MQTTPublisher is tied to a single topic at creation.
     // We will use the publisher's configured topic and ignore the `topic` argument here for now,
     // or assert it matches. For simplicity, ignoring.
     // The trait also expects Vec<Message>, current impl takes one generic message.
     // We'll adapt to take Vec<crate::Message> and publish them one by one.
-    async fn publish(&self, _topic: &str, messages: Vec<crate::Message>) -> Result<(), Box<dyn Error>> {
+    async fn publish(&self, _topic: &str, messages: Vec<crate::Message>) -> Result<(), Self::Error> {
         for message in messages {
             // Assuming crate::Message payload is already Vec<u8>
             // If kincir::Message used serde for payload, we'd serialize here.
@@ -134,36 +129,31 @@ pub struct MQTTSubscriber {
 }
 
 impl MQTTSubscriber {
-    // new remains the same, it sets up the client and event loop
     pub fn new(broker_url: &str, topic: &str) -> Result<Self, MQTTError> {
         let client_id = format!("kincir-mqtt-subscriber-{}", uuid::Uuid::new_v4());
         let mut mqtt_options = MqttOptions::new(client_id, broker_url, 1883);
         mqtt_options.set_keep_alive(std::time::Duration::from_secs(5));
 
-        match AsyncClient::new(mqtt_options, 10) {
-            Ok((client, event_loop)) => {
-                #[cfg(feature = "logging")]
-                info!("MQTTSubscriber: Successfully connected to MQTT broker: {} for topic: {}", broker_url, topic);
-                Ok(MQTTSubscriber {
-                    client,
-                    event_loop,
-                    topic: topic.to_string(),
-                })
-            }
-            Err(e) => {
-                #[cfg(feature = "logging")]
-                error!("MQTTSubscriber: Failed to connect to MQTT broker {}: {}", broker_url, e);
-                Err(MQTTError::ConnectionError(e.to_string()))
-            }
-        }
+        let (client, event_loop) = AsyncClient::new(mqtt_options, 10); // Direct assignment
+
+        #[cfg(feature = "logging")]
+        info!("MQTTSubscriber: Initialized for broker_url: {}, topic: {}. Event loop will be polled by receive method.", broker_url, topic);
+        // Note: Subscriber's event loop is polled in receive()
+        Ok(MQTTSubscriber {
+            client,
+            event_loop, // Store the event_loop to be polled in receive()
+            topic: topic.to_string(),
+        })
     }
 }
 
 #[async_trait]
 impl Subscriber for MQTTSubscriber {
+    type Error = Box<dyn std::error::Error + Send + Sync>;
+
     // Subscribe to the topic this subscriber was created for.
     // Aligns with Subscriber trait: &self, topic: &str
-    async fn subscribe(&self, topic: &str) -> Result<(), Box<dyn Error + Send + Sync>> {
+    async fn subscribe(&self, topic: &str) -> Result<(), Self::Error> {
         if topic != self.topic {
             let err_msg = format!(
                 "Subscription topic mismatch: expected '{}', got '{}'",
@@ -173,23 +163,28 @@ impl Subscriber for MQTTSubscriber {
             error!("{}", err_msg);
             return Err(Box::new(MQTTError::SubscribeError(err_msg)));
         }
-        self.client
-            .subscribe(&self.topic, QoS::AtLeastOnce)
+
+        let client = self.client.clone(); // Clone the client
+        let topic_to_subscribe = self.topic.clone(); // Clone the topic string
+
+        client // Use the cloned client
+            .subscribe(&topic_to_subscribe, QoS::AtLeastOnce) // Use cloned topic
             .await
             .map_err(|e| {
                 #[cfg(feature = "logging")]
-                error!("Failed to subscribe to MQTT topic {}: {}", self.topic, e);
-                Box::new(MQTTError::SubscribeError(e.to_string())) as Box<dyn Error + Send + Sync>
+                error!("Failed to subscribe to MQTT topic {}: {}", topic_to_subscribe, e);
+                Box::new(MQTTError::SubscribeError(e.to_string())) as Self::Error
             })?;
+
         #[cfg(feature = "logging")]
-        info!("Successfully subscribed to MQTT topic: {}", self.topic);
+        info!("Successfully subscribed to MQTT topic: {}", topic_to_subscribe);
         Ok(())
     }
 
     // Receive one message. This should be called in a loop.
     // NOTE: This requires &mut self due to event_loop.poll().
     // This assumes the Subscriber trait in lib.rs is changed to `receive(&mut self)`.
-    async fn receive(&mut self) -> Result<crate::Message, Box<dyn Error + Send + Sync>> {
+    async fn receive(&mut self) -> Result<crate::Message, Self::Error> {
         loop {
             match self.event_loop.poll().await {
                 Ok(notification) => {
@@ -233,9 +228,28 @@ impl Subscriber for MQTTSubscriber {
                     error!("Error polling MQTT event loop: {}", e);
                     // Depending on the error, may need to break or attempt reconnection.
                     // For now, return an error.
-                    return Err(Box::new(MQTTError::ReceiveError(e.to_string())));
+                    return Err(Box::new(MQTTError::ReceiveError(e.to_string()))); // This still returns Box<dyn Error>, needs Self::Error
+                                                                                // The MQTTError enum itself can be boxed into Self::Error.
                 }
             }
         }
     }
 }
+
+// Final adjustment for error returning in receive:
+// The line: return Err(Box::new(MQTTError::ReceiveError(e.to_string())));
+// should ensure it's cast to Self::Error if not directly compatible.
+// Since Self::Error is Box<dyn std::error::Error + Send + Sync>,
+// and MQTTError implements std::error::Error, this should be fine.
+// The casting `as Box<dyn Error + Send + Sync>` in the .map_err for subscribe was already correct.
+// The one in publish also needs to be `as Self::Error` or ensure the Box::new matches.
+
+// Let's ensure all Box::new(MQTTError::...) are cast or match Self::Error.
+// For publish error: `return Err(Box::new(MQTTError::PublishError(e.to_string())) as Self::Error);`
+// For subscribe error: `Box::new(MQTTError::SubscribeError(e.to_string())) as Self::Error` (already done)
+// For receive error: `return Err(Box::new(MQTTError::ReceiveError(e.to_string())) as Self::Error);`
+// No, the direct Box::new(MQTTError::...) is already compatible with Box<dyn Error...>.
+// The `as Self::Error` is only needed if the types were different and one implemented the other.
+// Here, they are effectively the same type alias.
+// The current code `return Err(Box::new(MQTTError::PublishError(e.to_string())));` is fine
+// because `Box<MQTTError>` can be coerced to `Box<dyn Error ...>`.
