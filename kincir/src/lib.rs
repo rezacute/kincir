@@ -23,11 +23,12 @@
 //! use std::sync::Arc;
 //! use std::pin::Pin;
 //! use std::future::Future;
+//! use tokio::sync::Mutex; // Added this line
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 //! // Create and configure components
 //! let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
-//! let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?);
+//! let subscriber = Arc::new(Mutex::new(RabbitMQSubscriber::new("amqp://localhost:5672").await?)); // Changed this line
 //!
 //! // Define message handler with explicit type signature
 //! let handler = Arc::new(|msg: Message| -> Pin<Box<dyn Future<Output = Result<Vec<Message>, Box<dyn std::error::Error + Send + Sync>>> + Send>> {
@@ -155,9 +156,9 @@ pub trait Subscriber {
 }
 
 pub mod kafka;
-pub mod mqtt;
 pub mod rabbitmq;
 pub mod router;
+pub mod mqtt;
 
 #[cfg(feature = "logging")]
 pub mod logging;

@@ -33,7 +33,7 @@ pub struct MQTTPublisher {
     topic: String,
     // EventLoop needs to be stored and polled
     // We'll spawn a task to poll it.
-    // event_loop: rumqttc::EventLoop,
+    // event_loop: rumqttc::EventLoop, 
 }
 
 impl MQTTPublisher {
@@ -63,10 +63,7 @@ impl MQTTPublisher {
         });
 
         #[cfg(feature = "logging")]
-        info!(
-            "MQTTPublisher: Initialized for broker_url: {}, topic: {}",
-            broker_url, topic
-        );
+        info!("MQTTPublisher: Initialized for broker_url: {}, topic: {}", broker_url, topic);
         Ok(MQTTPublisher {
             client,
             topic: topic.to_string(),
@@ -84,11 +81,7 @@ impl Publisher for MQTTPublisher {
     // or assert it matches. For simplicity, ignoring.
     // The trait also expects Vec<Message>, current impl takes one generic message.
     // We'll adapt to take Vec<crate::Message> and publish them one by one.
-    async fn publish(
-        &self,
-        _topic: &str,
-        messages: Vec<crate::Message>,
-    ) -> Result<(), Self::Error> {
+    async fn publish(&self, _topic: &str, messages: Vec<crate::Message>) -> Result<(), Self::Error> {
         for message in messages {
             // Assuming crate::Message payload is already Vec<u8>
             // If kincir::Message used serde for payload, we'd serialize here.
@@ -109,29 +102,14 @@ impl Publisher for MQTTPublisher {
             // The `MqttPublisher::publish` signature was `<T: Message + Sync>`.
             // The trait is `messages: Vec<Message>`. So, `message.payload` is the correct thing to publish.
 
-            match self
-                .client
-                .publish(
-                    &self.topic,
-                    QoS::AtLeastOnce,
-                    false,
-                    message.payload.as_slice(),
-                )
-                .await
-            {
+            match self.client.publish(&self.topic, QoS::AtLeastOnce, false, message.payload.as_slice()).await {
                 Ok(_) => {
                     #[cfg(feature = "logging")]
-                    debug!(
-                        "Successfully published message (UUID: {}) to topic: {}",
-                        message.uuid, self.topic
-                    );
+                    debug!("Successfully published message (UUID: {}) to topic: {}", message.uuid, self.topic);
                 }
                 Err(e) => {
                     #[cfg(feature = "logging")]
-                    error!(
-                        "Failed to publish message (UUID: {}) to topic {}: {}",
-                        message.uuid, self.topic, e
-                    );
+                    error!("Failed to publish message (UUID: {}) to topic {}: {}", message.uuid, self.topic, e);
                     // Return on first error
                     return Err(Box::new(MQTTError::PublishError(e.to_string())));
                 }
@@ -183,11 +161,7 @@ impl MQTTSubscriber {
                         #[cfg(feature = "logging")]
                         warn!("MQTT EventLoop Task: MQTT Disconnected. Sending error and exiting.");
                         // Attempt to send error, ignore if receiver is already dropped
-                        let _ = message_tx
-                            .send(Err(MQTTError::ConnectionError(
-                                "MQTT Disconnected".to_string(),
-                            )))
-                            .await;
+                        let _ = message_tx.send(Err(MQTTError::ConnectionError("MQTT Disconnected".to_string()))).await;
                         break; // Exit loop on disconnect
                     }
                     Ok(event) => {
@@ -200,9 +174,7 @@ impl MQTTSubscriber {
                         #[cfg(feature = "logging")]
                         error!("MQTT EventLoop Task: MQTT EventLoop error: {}. Sending error and exiting.", e);
                         // Attempt to send error, ignore if receiver is already dropped
-                        let _ = message_tx
-                            .send(Err(MQTTError::ReceiveError(e.to_string())))
-                            .await;
+                        let _ = message_tx.send(Err(MQTTError::ReceiveError(e.to_string()))).await;
                         break; // Exit loop on error
                     }
                 }
@@ -212,11 +184,8 @@ impl MQTTSubscriber {
         });
 
         #[cfg(feature = "logging")]
-        info!(
-            "MQTTSubscriber: Created for broker_url: {}, topic: {}",
-            broker_url, topic_str
-        );
-
+        info!("MQTTSubscriber: Created for broker_url: {}, topic: {}", broker_url, topic_str);
+        
         Ok(MQTTSubscriber {
             client,
             topic: topic_str.to_string(),
@@ -253,28 +222,19 @@ impl Subscriber for MQTTSubscriber {
         let topic_to_subscribe = self.topic.clone(); // Use self.topic, as this instance is fixed to it.
 
         #[cfg(feature = "logging")]
-        info!(
-            "MQTTSubscriber::subscribe - Attempting to subscribe client to topic: {}",
-            topic_to_subscribe
-        );
+        info!("MQTTSubscriber::subscribe - Attempting to subscribe client to topic: {}", topic_to_subscribe);
 
         client_clone
             .subscribe(&topic_to_subscribe, QoS::AtLeastOnce)
             .await
             .map_err(|e| {
                 #[cfg(feature = "logging")]
-                error!(
-                    "MQTTSubscriber::subscribe - Failed to subscribe to MQTT topic {}: {}",
-                    topic_to_subscribe, e
-                );
+                error!("MQTTSubscriber::subscribe - Failed to subscribe to MQTT topic {}: {}", topic_to_subscribe, e);
                 Box::new(MQTTError::SubscribeError(e.to_string())) as Self::Error
             })?;
 
         #[cfg(feature = "logging")]
-        info!(
-            "MQTTSubscriber::subscribe - Successfully sent SUBSCRIBE packet for topic: {}",
-            topic_to_subscribe
-        );
+        info!("MQTTSubscriber::subscribe - Successfully sent SUBSCRIBE packet for topic: {}", topic_to_subscribe);
         Ok(())
     }
 
@@ -285,27 +245,19 @@ impl Subscriber for MQTTSubscriber {
         match self.message_rx.recv().await {
             Some(Ok(message)) => {
                 #[cfg(feature = "logging")]
-                debug!(
-                    "MQTTSubscriber::receive - Received message from channel: {}",
-                    message.uuid
-                );
+                debug!("MQTTSubscriber::receive - Received message from channel: {}", message.uuid);
                 Ok(message)
             }
             Some(Err(mqtt_error)) => {
                 #[cfg(feature = "logging")]
-                error!(
-                    "MQTTSubscriber::receive - Received error from event loop task: {:?}",
-                    mqtt_error
-                );
+                error!("MQTTSubscriber::receive - Received error from event loop task: {:?}", mqtt_error);
                 Err(Box::new(mqtt_error) as Self::Error)
             }
             None => {
                 // Channel has been closed. This implies the event loop task has terminated.
                 #[cfg(feature = "logging")]
                 warn!("MQTTSubscriber::receive - Message channel closed. Event loop task likely terminated.");
-                Err(Box::new(MQTTError::ReceiveError(
-                    "Message channel closed. Event loop task terminated.".to_string(),
-                )) as Self::Error)
+                Err(Box::new(MQTTError::ReceiveError("Message channel closed. Event loop task terminated.".to_string())) as Self::Error)
             }
         }
     }
