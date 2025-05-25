@@ -155,9 +155,9 @@ pub trait Subscriber {
 }
 
 pub mod kafka;
+pub mod mqtt;
 pub mod rabbitmq;
 pub mod router;
-pub mod mqtt;
 
 #[cfg(feature = "logging")]
 pub mod logging;
