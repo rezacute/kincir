@@ -1,0 +1,8 @@
+blank_issues_enabled: false # Discourage blank issues
+contact_links:
+  - name: Ask a question or discuss
+    url: https://github.com/rezacute/kincir/discussions/new # Link to GitHub Discussions if enabled, or a relevant chat/forum
+    about: Please ask and answer questions here.
+  - name: Kincir Documentation
+    url: https://docs.rs/kincir # Link to official documentation
+    about: Check the documentation for usage and API details.
