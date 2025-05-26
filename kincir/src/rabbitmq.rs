@@ -210,7 +210,6 @@ impl RabbitMQSubscriber {
     ///
     /// * `uri` - The RabbitMQ connection URI (e.g., "amqp://localhost:5672")
     #[cfg(not(feature = "logging"))]
-
     pub async fn new(uri: &str) -> Result<Self, RabbitMQError> {
         let connection = Connection::connect(uri, ConnectionProperties::default())
             .await
@@ -220,29 +219,6 @@ impl RabbitMQSubscriber {
             connection,
             topic: Arc::new(tokio::sync::Mutex::new(None)),
             consumer: Arc::new(tokio::sync::Mutex::new(None)),
-        })
-    }
-
-    /// Creates a new RabbitMQSubscriber instance with logging.
-    ///
-    /// # Arguments
-    ///
-    /// * `uri` - The RabbitMQ connection URI (e.g., "amqp://localhost:5672")
-    #[cfg(feature = "logging")]
-
-    pub async fn new(uri: &str) -> Result<Self, RabbitMQError> {
-        let connection = Connection::connect(uri, ConnectionProperties::default())
-            .await
-            .map_err(RabbitMQError::RabbitMQ)?;
-
-        // Create a default NoOpLogger
-        let logger = Arc::new(crate::logging::NoOpLogger::new());
-
-        Ok(Self {
-            connection,
-            topic: Arc::new(tokio::sync::Mutex::new(None)),
-            consumer: Arc::new(tokio::sync::Mutex::new(None)),
-            logger,
         })
     }
 

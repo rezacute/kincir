@@ -4,7 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-kincir = { workspace = true }
+kincir = { path = "../../kincir", features = ["logging"] } # Added features = ["logging"]
 tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+rumqttc = "0.24.0" # Added rumqttc dependency
+
+[features]
+default = []
+logging = ["kincir/logging"]

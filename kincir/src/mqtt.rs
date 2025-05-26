@@ -1,5 +1,6 @@
 use async_trait::async_trait;
-use rumqttc::{AsyncClient, MqttOptions, QoS};
+use rumqttc::{AsyncClient, MqttOptions}; // Removed QoS from here
+pub use rumqttc::QoS; // Publicly re-export QoS
 // serde::{Deserialize, Serialize}; // Removed
 // serde_json; // Removed
 // std::error::Error; // Removed
@@ -26,6 +27,8 @@ pub enum MQTTError {
     SerializationError(String),
     #[error("Deserialization error: {0}")]
     DeserializationError(String),
+    #[error("Other MQTT error: {0}")]
+    Other(String),
 }
 
 pub struct MQTTPublisher {
@@ -82,7 +85,7 @@ impl Publisher for MQTTPublisher {
     // Current MQTTPublisher is tied to a single topic at creation.
     // We will use the publisher's configured topic and ignore the `topic` argument here for now,
     // or assert it matches. For simplicity, ignoring.
-    // The trait also expects Vec<Message>, current impl takes one generic message.
+    // The trait also expects Vec<crate::Message>, current impl takes one generic message.
     // We'll adapt to take Vec<crate::Message> and publish them one by one.
     async fn publish(
         &self,
@@ -149,10 +152,11 @@ pub struct MQTTSubscriber {
     client: AsyncClient, // Retain client for potential re-subscribe logic or other control operations
     topic: String,
     message_rx: mpsc::Receiver<Result<crate::Message, MQTTError>>,
+    qos: QoS, // Added QoS field
 }
 
 impl MQTTSubscriber {
-    pub fn new(broker_url: &str, topic_str: &str) -> Result<Self, MQTTError> {
+    pub fn new(broker_url: &str, topic_str: &str, qos: QoS) -> Result<Self, MQTTError> { // Added qos parameter
         let client_id = format!("kincir-mqtt-subscriber-{}", Uuid::new_v4());
         let mut mqtt_options = MqttOptions::new(client_id, broker_url, 1883);
         mqtt_options.set_keep_alive(std::time::Duration::from_secs(5));
@@ -221,6 +225,7 @@ impl MQTTSubscriber {
             client,
             topic: topic_str.to_string(),
             message_rx,
+            qos, // Store QoS
         })
     }
 }
@@ -259,7 +264,7 @@ impl Subscriber for MQTTSubscriber {
         );
 
         client_clone
-            .subscribe(&topic_to_subscribe, QoS::AtLeastOnce)
+            .subscribe(&topic_to_subscribe, self.qos) // Use self.qos
             .await
             .map_err(|e| {
                 #[cfg(feature = "logging")]
@@ -323,7 +328,7 @@ impl Subscriber for MQTTSubscriber {
 // For publish error: `return Err(Box::new(MQTTError::PublishError(e.to_string())) as Self::Error);`
 // For subscribe error: `Box::new(MQTTError::SubscribeError(e.to_string())) as Self::Error` (already done)
 // For receive error: `return Err(Box::new(MQTTError::ReceiveError(e.to_string())) as Self::Error);`
-// No, the direct Box::new(MQTTError::...) is already compatible with Box<dyn Error...>.
+// No, the direct Box::new(MQTTError::...) is already compatible with Box<dyn Error ...>`.
 // The `as Self::Error` is only needed if the types were different and one implemented the other.
 // Here, they are effectively the same type alias.
 // The current code `return Err(Box::new(MQTTError::PublishError(e.to_string())));` is fine
