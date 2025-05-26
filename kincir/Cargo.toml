@@ -15,7 +15,7 @@ protobuf = ["prost"]
 [dependencies]
 tokio = { version = "1.36", features = ["full"] }
 rdkafka = { version = "0.36", features = ["tokio"] }
-lapin = "2.3"
+lapin = { version = "2.3", features = ["tokio-global-executor"] }
 tokio-amqp = "2.0"
 async-trait = "0.1"
 thiserror = "1.0"

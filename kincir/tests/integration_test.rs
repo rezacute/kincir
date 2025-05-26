@@ -31,8 +31,8 @@ mod mqtt_to_rabbitmq_tunnel_tests {
     use lapin::{Connection, ConnectionProperties, options::*, types::FieldTable, Consumer}; // Removed Channel
     use tokio::time::{timeout, Duration};
     use futures::StreamExt; // Replaced tokio::stream::StreamExt
-    use futures_util::stream::StreamExt as _; // Added for potential trait conflicts, or if futures::StreamExt alone is not enough
-    use tokio_amqp::LapinTokioExt; // Added
+    // use futures_util::stream::StreamExt as _; // Removed unused import
+    // use tokio_amqp::LapinTokioExt; // Removed as with_tokio() will be replaced
     use uuid::Uuid;
     use kincir::Message as KincirMessage;
     // use serde_json; // Removed
@@ -104,7 +104,7 @@ mod mqtt_to_rabbitmq_tunnel_tests {
         // Setup RabbitMQ consumer
         let rmq_conn = Connection::connect(
             &rmq_uri,
-            ConnectionProperties::default().with_tokio(),
+            ConnectionProperties::default(), // Rely on default executor, assuming lapins tokio-global-executor feature is enabled
         )
         .await
         .expect("Failed to connect to RabbitMQ for consumer setup");
