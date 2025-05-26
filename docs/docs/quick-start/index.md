@@ -9,7 +9,7 @@ This guide will walk you through creating a simple messaging application using K
 
 ## Basic Setup
 
-First, make sure you have added Kincir to your project's dependencies as described in the [Installation](/docs/installation/) guide.
+First, make sure you have added Kincir to your project's dependencies as described in the [Installation](/docs/installation/index.md) guide.
 
 ## Creating a Publisher
 
@@ -209,4 +209,4 @@ Now that you've seen the basics of using Kincir, you can explore more advanced t
 - [Configuration options](/docs/configuration/)
 - [Message routing in depth](/docs/core-concepts/routing/)
 - [Working with different broker backends](/docs/backends/)
-- [Error handling strategies](/docs/core-concepts/error-handling/) 
+- [Error handling strategies](/docs/core-concepts/error-handling/)
