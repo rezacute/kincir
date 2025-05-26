@@ -126,6 +126,54 @@ title: Documentation
     </div>
   </div>
 
+  ## MQTT to RabbitMQ Tunnel
+    
+  The `MqttToRabbitMQTunnel` provides a way to forward messages from MQTT topics to a RabbitMQ message broker.
+  
+  ### Configuration
+  
+  To use the tunnel, you need to set up two configuration structs:
+  
+  1.  **`MqttTunnelConfig`**:
+      - `broker_url`: The URL of your MQTT broker (e.g., "mqtt://localhost:1883").
+      - `topics`: A `Vec<String>` of MQTT topics to subscribe to.
+      - `qos`: The Quality of Service level (u8) for MQTT subscriptions (0, 1, or 2).
+  
+  2.  **`RabbitMQTunnelConfig`**:
+      - `uri`: The connection URI for your RabbitMQ instance (e.g., "amqp://guest:guest@localhost:5672/%2f").
+      - `routing_key`: The RabbitMQ routing key to which messages will be published. This is often the name of a queue if using the default exchange, or a routing key that matches a binding on an exchange.
+  
+  ### Example Usage
+  
+  ```rust,no_run
+  use kincir::tunnel::{MqttTunnelConfig, RabbitMQTunnelConfig, MqttToRabbitMQTunnel};
+  use std::env;
+  
+  # async fn run_tunnel() -> Result<(), Box<dyn std::error::Error>> {
+  let mqtt_broker_url = "mqtt://localhost:1883";
+  let mqtt_topics = vec!["data/source".to_string()];
+  let mqtt_qos = 1;
+  let mqtt_config = MqttTunnelConfig::new(&mqtt_broker_url, mqtt_topics, mqtt_qos);
+  
+  let rabbitmq_uri = "amqp://localhost:5672";
+  let rabbitmq_routing_key = "iot_data_queue";
+  let rabbitmq_config = RabbitMQTunnelConfig::new(&rabbitmq_uri, &rabbitmq_routing_key);
+  
+  let mut tunnel = MqttToRabbitMQTunnel::new(mqtt_config, rabbitmq_config);
+  
+  if let Err(e) = tunnel.run().await {
+      eprintln!("Tunnel encountered an error: {}", e);
+  }
+  # Ok(())
+  # }
+  ```
+  
+  For a complete runnable example, please see the `examples/mqtt-to-rabbitmq-example` directory in the repository.
+  
+  ### Error Handling
+  
+  The `run` method of the tunnel returns a `Result<(), TunnelError>`. You should handle potential errors such as connection issues, configuration problems, or runtime errors during message processing.
+
   <div class="docs-footer">
 
   </div>
