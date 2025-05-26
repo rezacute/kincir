@@ -46,7 +46,10 @@ jobs:
         id: pages
         uses: actions/configure-pages@v4
 
-      - name: Install dependencies
+      - name: Remove existing Gemfile.lock to force regeneration
+        run: rm -f Gemfile.lock
+
+      - name: Install dependencies and generate new Gemfile.lock
         run: bundle install
 
       - name: Build with Jekyll
