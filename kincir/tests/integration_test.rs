@@ -52,6 +52,7 @@ mod mqtt_to_rabbitmq_tunnel_tests {
         });
     }
 
+    #[allow(clippy::double_ended_iterator_last)]
     #[tokio::test]
     #[ignore] // Ignored by default as it requires running MQTT and RabbitMQ instances
     async fn test_mqtt_to_rabbitmq_tunnel_e2e() {
