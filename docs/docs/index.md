@@ -12,7 +12,7 @@ title: Documentation
     <div class="docs-section">
       <h2>Getting Started</h2>
       <div class="docs-links">
-        <a href="/docs/installation/index.md" class="docs-link">
+        <a href="{{ '/docs/installation/index' | relative_url }}" class="docs-link">
           <div class="docs-link-icon">📥</div>
           <div class="docs-link-content">
             <h3>Installation</h3>
