@@ -1,12 +1,9 @@
 use kincir::mqtt::{MQTTError, MQTTPublisher, MQTTSubscriber, QoS};
 use kincir::{Message, Publisher, Subscriber};
 use std::sync::Arc;
-use tokio;
 
 #[cfg(feature = "logging")]
 use tracing::{debug, error, info, warn, Level};
-#[cfg(feature = "logging")]
-use tracing_subscriber;
 
 // Custom warn for no_logging to avoid unused import and macro error
 #[cfg(not(feature = "logging"))]

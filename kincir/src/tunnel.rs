@@ -216,10 +216,7 @@ impl MqttToRabbitMQTunnel {
                                     error!("Task for {}: Failed to publish message UUID {} to RabbitMQ: {}. Message might be lost.", topic_clone, kincir_message.uuid, e);
                                     // Decide on error handling for publish failure. For now, log and continue.
                                     // To make it more robust, this task could return an error:
-                                    return Err(TunnelError::RabbitMQClientError(format!(
-                                        "Task {}: RabbitMQ publish failed: {}",
-                                        topic_clone, e
-                                    )));
+                                    return Err(TunnelError::RabbitMQClientError(format!("Task {}: RabbitMQ publish failed: {}", topic_clone, e)));
                                 }
                             }
                         }

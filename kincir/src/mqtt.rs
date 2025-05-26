@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 pub use rumqttc::QoS;
 use rumqttc::{AsyncClient, MqttOptions}; // Removed QoS from here // Publicly re-export QoS
-                                         // serde::{Deserialize, Serialize}; // Removed
-                                         // serde_json; // Removed
-                                         // std::error::Error; // Removed
-                                         // std::fmt; // Removed
+                                                                  // serde::{Deserialize, Serialize}; // Removed
+                                                                  // serde_json; // Removed
+                                                                  // std::error::Error; // Removed
+                                                                  // std::fmt; // Removed
 use thiserror::Error; // Keep thiserror for MQTTError definition
 use tokio::sync::mpsc;
 
