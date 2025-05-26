@@ -21,7 +21,7 @@ pub struct MqttTunnelConfig {
     pub broker_url: String,
     pub topics: Vec<String>,
     pub qos: u8, // Changed back to u8 to avoid Serde issues with rumqttc::QoS
-    // Add fields for authentication later if needed
+                 // Add fields for authentication later if needed
 }
 
 impl MqttTunnelConfig {
@@ -53,9 +53,9 @@ impl KafkaTunnelConfig {
 #[derive(Error, Debug)]
 pub enum TunnelError {
     #[error("MQTT client error: {0}")]
-    MqttClientError(String), 
+    MqttClientError(String),
     #[error("Kafka client error: {0}")]
-    KafkaClientError(String), 
+    KafkaClientError(String),
     #[error("Message processing error: {0}")]
     MessageProcessingError(String),
     #[error("Configuration error: {0}")]
@@ -81,19 +81,24 @@ impl MqttToKafkaTunnel {
 
     pub async fn run(&mut self) -> Result<(), TunnelError> {
         #[cfg(feature = "logging")]
-        info!("MqttToKafkaTunnel starting up for {} MQTT topics...", self.mqtt_config.topics.len());
+        info!(
+            "MqttToKafkaTunnel starting up for {} MQTT topics...",
+            self.mqtt_config.topics.len()
+        );
 
         if self.mqtt_config.topics.is_empty() {
             #[cfg(feature = "logging")]
             error!("No MQTT topics configured for the tunnel.");
-            return Err(TunnelError::ConfigurationError("No MQTT topics provided".to_string()));
+            return Err(TunnelError::ConfigurationError(
+                "No MQTT topics provided".to_string(),
+            ));
         }
 
         // Create Kafka publisher once. FutureProducer from rdkafka is cloneable.
-        let kafka_publisher = KafkaPublisher::new(
-            self.kafka_config.broker_urls.clone(),
-        )
-        .map_err(|e| TunnelError::KafkaClientError(format!("Failed to create Kafka publisher: {}", e)))?;
+        let kafka_publisher =
+            KafkaPublisher::new(self.kafka_config.broker_urls.clone()).map_err(|e| {
+                TunnelError::KafkaClientError(format!("Failed to create Kafka publisher: {}", e))
+            })?;
 
         let mut task_handles: Vec<JoinHandle<Result<(), TunnelError>>> = Vec::new();
 
@@ -118,43 +123,68 @@ impl MqttToKafkaTunnel {
                 };
 
                 #[cfg(feature = "logging")]
-                info!("Task for {}: Initializing MQTT subscriber for broker_url: {}, qos: {:?}", topic_clone, mqtt_broker_url, rumqttc_qos);
+                info!(
+                    "Task for {}: Initializing MQTT subscriber for broker_url: {}, qos: {:?}",
+                    topic_clone, mqtt_broker_url, rumqttc_qos
+                );
 
                 // Create MQTT subscriber for this specific topic
-                let mut mqtt_subscriber = MQTTSubscriber::new(
-                    &mqtt_broker_url,
-                    &topic_clone,
-                    rumqttc_qos,
-                )
-                .map_err(|e| {
-                    #[cfg(feature = "logging")]
-                    error!("Task for {}: Failed to create MQTT subscriber: {}", topic_clone, e);
-                    TunnelError::MqttClientError(format!("Task {}: MQTT subscriber creation failed: {}", topic_clone, e))
-                })?;
+                let mut mqtt_subscriber =
+                    MQTTSubscriber::new(&mqtt_broker_url, &topic_clone, rumqttc_qos).map_err(
+                        |e| {
+                            #[cfg(feature = "logging")]
+                            error!(
+                                "Task for {}: Failed to create MQTT subscriber: {}",
+                                topic_clone, e
+                            );
+                            TunnelError::MqttClientError(format!(
+                                "Task {}: MQTT subscriber creation failed: {}",
+                                topic_clone, e
+                            ))
+                        },
+                    )?;
 
                 // Subscribe to the MQTT topic
                 match mqtt_subscriber.subscribe(&topic_clone).await {
                     Ok(_) => {
                         #[cfg(feature = "logging")]
-                        info!("Task for {}: Successfully subscribed to MQTT topic.", topic_clone);
+                        info!(
+                            "Task for {}: Successfully subscribed to MQTT topic.",
+                            topic_clone
+                        );
                     }
                     Err(e) => {
                         #[cfg(feature = "logging")]
-                        error!("Task for {}: Failed to subscribe to MQTT topic: {}", topic_clone, e);
-                        return Err(TunnelError::MqttClientError(format!("Task {}: MQTT subscription failed: {}", topic_clone, e)));
+                        error!(
+                            "Task for {}: Failed to subscribe to MQTT topic: {}",
+                            topic_clone, e
+                        );
+                        return Err(TunnelError::MqttClientError(format!(
+                            "Task {}: MQTT subscription failed: {}",
+                            topic_clone, e
+                        )));
                     }
                 }
 
                 #[cfg(feature = "logging")]
-                info!("Task for {}: Starting message forwarding loop to Kafka topic {}.", topic_clone, kafka_target_topic);
+                info!(
+                    "Task for {}: Starting message forwarding loop to Kafka topic {}.",
+                    topic_clone, kafka_target_topic
+                );
 
                 loop {
                     match mqtt_subscriber.receive().await {
                         Ok(kincir_message) => {
                             #[cfg(feature = "logging")]
-                            debug!("Task for {}: Received message UUID {} from MQTT.", topic_clone, kincir_message.uuid);
+                            debug!(
+                                "Task for {}: Received message UUID {} from MQTT.",
+                                topic_clone, kincir_message.uuid
+                            );
 
-                            match kafka_publisher_clone.publish(&kafka_target_topic, vec![kincir_message.clone()]).await {
+                            match kafka_publisher_clone
+                                .publish(&kafka_target_topic, vec![kincir_message.clone()])
+                                .await
+                            {
                                 Ok(_) => {
                                     #[cfg(feature = "logging")]
                                     debug!("Task for {}: Successfully published message UUID {} to Kafka topic {}.", topic_clone, kincir_message.uuid, kafka_target_topic);
@@ -170,10 +200,16 @@ impl MqttToKafkaTunnel {
                         }
                         Err(e) => {
                             #[cfg(feature = "logging")]
-                            error!("Task for {}: Error receiving message from MQTT: {}.", topic_clone, e);
+                            error!(
+                                "Task for {}: Error receiving message from MQTT: {}.",
+                                topic_clone, e
+                            );
                             // This error might be critical (e.g., connection lost).
                             // The task should probably exit and report the error.
-                            return Err(TunnelError::MqttClientError(format!("Task {}: MQTT receive error: {}", topic_clone, e)));
+                            return Err(TunnelError::MqttClientError(format!(
+                                "Task {}: MQTT receive error: {}",
+                                topic_clone, e
+                            )));
                         }
                     }
                 }
@@ -195,7 +231,10 @@ impl MqttToKafkaTunnel {
                     // Task panicked or was cancelled
                     #[cfg(feature = "logging")]
                     error!("A tunnel task panicked or was cancelled: {:?}", e);
-                    return Err(TunnelError::RuntimeError(format!("Task execution failed: {}", e)));
+                    return Err(TunnelError::RuntimeError(format!(
+                        "Task execution failed: {}",
+                        e
+                    )));
                 }
             }
         }

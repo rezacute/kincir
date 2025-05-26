@@ -1,10 +1,10 @@
 use async_trait::async_trait;
-use rumqttc::{AsyncClient, MqttOptions}; // Removed QoS from here
-pub use rumqttc::QoS; // Publicly re-export QoS
-// serde::{Deserialize, Serialize}; // Removed
-// serde_json; // Removed
-// std::error::Error; // Removed
-// std::fmt; // Removed
+pub use rumqttc::QoS;
+use rumqttc::{AsyncClient, MqttOptions}; // Removed QoS from here // Publicly re-export QoS
+                                                                  // serde::{Deserialize, Serialize}; // Removed
+                                                                  // serde_json; // Removed
+                                                                  // std::error::Error; // Removed
+                                                                  // std::fmt; // Removed
 use thiserror::Error; // Keep thiserror for MQTTError definition
 use tokio::sync::mpsc;
 
@@ -156,7 +156,8 @@ pub struct MQTTSubscriber {
 }
 
 impl MQTTSubscriber {
-    pub fn new(broker_url: &str, topic_str: &str, qos: QoS) -> Result<Self, MQTTError> { // Added qos parameter
+    pub fn new(broker_url: &str, topic_str: &str, qos: QoS) -> Result<Self, MQTTError> {
+        // Added qos parameter
         let client_id = format!("kincir-mqtt-subscriber-{}", Uuid::new_v4());
         let mut mqtt_options = MqttOptions::new(client_id, broker_url, 1883);
         mqtt_options.set_keep_alive(std::time::Duration::from_secs(5));

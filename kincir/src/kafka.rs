@@ -69,7 +69,6 @@ use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::mpsc;
 
-
 /// Represents possible errors that can occur in Kafka operations.
 #[derive(Error, Debug)]
 pub enum KafkaError {
@@ -202,7 +201,9 @@ impl super::Subscriber for KafkaSubscriber {
             }
             None => {
                 self.logger.error("Channel closed").await;
-                Err(Box::new(KafkaError::ReceiveError("Channel closed".to_string())))
+                Err(Box::new(KafkaError::ReceiveError(
+                    "Channel closed".to_string(),
+                )))
             }
         }
     }
@@ -221,7 +222,9 @@ impl super::Subscriber for KafkaSubscriber {
         let mut rx_guard = self.rx.lock().await;
         match rx_guard.recv().await {
             Some(message) => Ok(message),
-            None => Err(Box::new(KafkaError::ReceiveError("Channel closed".to_string()))),
+            None => Err(Box::new(KafkaError::ReceiveError(
+                "Channel closed".to_string(),
+            ))),
         }
     }
 }

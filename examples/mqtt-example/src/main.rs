@@ -1,10 +1,10 @@
+use kincir::mqtt::{MQTTError, MQTTPublisher, MQTTSubscriber, QoS};
 use kincir::{Message, Publisher, Subscriber};
-use kincir::mqtt::{MQTTPublisher, MQTTSubscriber, MQTTError, QoS}; 
 use std::sync::Arc;
 use tokio;
 
 #[cfg(feature = "logging")]
-use tracing::{info, error, debug, warn, Level};
+use tracing::{debug, error, info, warn, Level};
 #[cfg(feature = "logging")]
 use tracing_subscriber;
 
@@ -16,12 +16,13 @@ macro_rules! warn {
     };
 }
 
-
 #[tokio::main]
 async fn main() -> Result<(), Box<MQTTError>> {
     // Initialize tracing subscriber for logging
     #[cfg(feature = "logging")]
-    tracing_subscriber::fmt().with_max_level(Level::DEBUG).init();
+    tracing_subscriber::fmt()
+        .with_max_level(Level::DEBUG)
+        .init();
 
     let broker_url = "mqtt://localhost:1883";
     let topic = "kincir/test/mqtt_example_revised";
@@ -29,9 +30,13 @@ async fn main() -> Result<(), Box<MQTTError>> {
 
     // --- Create MQTTPublisher ---
     #[cfg(feature = "logging")]
-    info!(publisher.broker = broker_url, publisher.topic = topic, "Creating MQTTPublisher");
+    info!(
+        publisher.broker = broker_url,
+        publisher.topic = topic,
+        "Creating MQTTPublisher"
+    );
     let publisher = match MQTTPublisher::new(broker_url, topic) {
-        Ok(p) => Arc::new(p), 
+        Ok(p) => Arc::new(p),
         Err(e) => {
             #[cfg(feature = "logging")]
             error!("Failed to create MQTTPublisher: {:?}", e);
@@ -43,8 +48,13 @@ async fn main() -> Result<(), Box<MQTTError>> {
 
     // --- Create MQTTSubscriber ---
     #[cfg(feature = "logging")]
-    info!(subscriber.broker = broker_url, subscriber.topic = topic, "Creating MQTTSubscriber");
-    let mut subscriber = match MQTTSubscriber::new(broker_url, topic, qos) { // Pass qos
+    info!(
+        subscriber.broker = broker_url,
+        subscriber.topic = topic,
+        "Creating MQTTSubscriber"
+    );
+    let mut subscriber = match MQTTSubscriber::new(broker_url, topic, qos) {
+        // Pass qos
         Ok(s) => s,
         Err(e) => {
             #[cfg(feature = "logging")]
@@ -58,10 +68,13 @@ async fn main() -> Result<(), Box<MQTTError>> {
     // --- MQTTSubscriber subscribes to the topic ---
     #[cfg(feature = "logging")]
     info!("MQTTSubscriber subscribing to topic '{}'...", topic);
-    match subscriber.subscribe(topic).await { 
+    match subscriber.subscribe(topic).await {
         Ok(_) => {
             #[cfg(feature = "logging")]
-            info!("MQTTSubscriber subscribed successfully to topic '{}'", topic);
+            info!(
+                "MQTTSubscriber subscribed successfully to topic '{}'",
+                topic
+            );
         }
         Err(e) => {
             #[cfg(feature = "logging")]
@@ -74,7 +87,10 @@ async fn main() -> Result<(), Box<MQTTError>> {
     let _subscriber_topic = topic.to_string(); // Prefixed with underscore as it's only used when logging feature is enabled
     tokio::spawn(async move {
         #[cfg(feature = "logging")]
-        info!(topic = _subscriber_topic.as_str(), "Subscriber task started. Listening for messages...");
+        info!(
+            topic = _subscriber_topic.as_str(),
+            "Subscriber task started. Listening for messages..."
+        );
         loop {
             match subscriber.receive().await {
                 Ok(message) => {
@@ -94,9 +110,15 @@ async fn main() -> Result<(), Box<MQTTError>> {
                 }
                 Err(e) => {
                     #[cfg(feature = "logging")]
-                    error!(topic = _subscriber_topic.as_str(), "Subscriber receive error: {:?}", e);
-                    warn!("Subscriber loop will attempt to continue after error: {:?}", e);
-                    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await; 
+                    error!(
+                        topic = _subscriber_topic.as_str(),
+                        "Subscriber receive error: {:?}", e
+                    );
+                    warn!(
+                        "Subscriber loop will attempt to continue after error: {:?}",
+                        e
+                    );
+                    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
                 }
             }
         }
@@ -119,7 +141,7 @@ async fn main() -> Result<(), Box<MQTTError>> {
         message.payload = message_payload_str,
         "Publishing message"
     );
-    
+
     // --- MQTTPublisher publishes the message ---
     match publisher.publish(topic, vec![kincir_message.clone()]).await {
         Ok(_) => {
