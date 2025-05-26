@@ -1,6 +1,6 @@
 use kincir::kafka::{KafkaPublisher, KafkaSubscriber};
 use kincir::logging::StdLogger;
-use kincir::{HandlerFunc, Message, Publisher, Router, Subscriber, Logger};
+use kincir::{HandlerFunc, Logger, Message, Publisher, Router, Subscriber};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
