@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+      - "9001:9001" # For WebSockets if needed
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf # Optional: if you need custom mosquitto config
+      # - ./mosquitto_data:/mosquitto/data # Optional: for persistence
+      # - ./mosquitto_log:/mosquitto/log # Optional: for logs
+
+  rabbitmq:
+    image: rabbitmq:3.12-management # Use management plugin version for UI
+    ports:
+      - "5672:5672"  # AMQP port
+      - "15672:15672" # Management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: guest # Default user
+      RABBITMQ_DEFAULT_PASS: guest # Default password
+    # volumes:
+      # - ./rabbitmq_data:/var/lib/rabbitmq # Optional: for persistence

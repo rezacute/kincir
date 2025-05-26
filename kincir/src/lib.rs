@@ -161,6 +161,7 @@ pub mod kafka;
 pub mod mqtt;
 pub mod rabbitmq;
 pub mod router;
+pub mod tunnel;
 
 #[cfg(feature = "logging")]
 pub mod logging;

@@ -23,6 +23,16 @@ Kincir is a Rust library that provides a unified interface for message streaming
 - Async/await support
 - Type-safe error handling
 
+### MQTT to RabbitMQ Tunnel
+
+Kincir now supports tunneling messages from MQTT topics directly to a RabbitMQ instance. This is useful for integrating MQTT-based IoT devices or services with backend applications that use RabbitMQ for message queuing.
+
+- Configure MQTT broker details, topics, and QoS.
+- Configure RabbitMQ connection URI and a target routing key.
+- Messages from the subscribed MQTT topics will be forwarded to the specified RabbitMQ routing key.
+
+For a practical example, see the `examples/mqtt-to-rabbitmq-example` directory.
+
 ## Installation
 
 Add kincir to your `Cargo.toml`:

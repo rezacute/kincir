@@ -38,17 +38,34 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
-          bundler-cache: true
-          working-directory: './docs'
+          # bundler-cache: true # Keep this to ensure gems are cached in vendor/bundle after clean install
+          working-directory: './docs' 
+          bundler: 'latest' # Ensure latest Bundler 2.x is available globally
 
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v4
-
-      - name: Install dependencies
-        run: bundle install
+      
+      - name: Clean Bundler setup
+        working-directory: ./docs # Ensure commands run in ./docs
+        run: |
+          echo "Current Bundler version: $(bundle --version)"
+          echo "Ruby version: $(ruby --version)"
+          echo "Gem environment:"
+          gem env
+          echo "Removing old Bundler cache and lockfile..."
+          rm -rf vendor/bundle  # Remove local cache that might contain old Bundler
+          rm -f Gemfile.lock    # Remove old lockfile
+          echo "Installing latest Bundler globally (again, to be sure)..."
+          gem install bundler -v '~> 2' --no-document # Ensure a Bundler 2.x is globally prominent
+          echo "New global Bundler version: $(bundle --version)"
+          
+      - name: Install dependencies and generate new Gemfile.lock
+        working-directory: ./docs # Ensure this runs in ./docs
+        run: bundle install # This will now use the global Bundler 2.x and generate a new Gemfile.lock
 
       - name: Build with Jekyll
+        working-directory: ./docs # Ensure this runs in ./docs
         run: bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
         env:
           JEKYLL_ENV: production
