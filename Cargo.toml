@@ -4,7 +4,9 @@ members = [
     "kincir",
     "examples/kafka-example",
     "examples/rabbitmq-example",
-    "examples/protobuf-example"
+    "examples/protobuf-example",
+    "examples/mqtt-example",
+    "examples/mqtt-to-kafka-example"
 ]
 
 [workspace.package]

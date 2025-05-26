@@ -28,9 +28,9 @@
 //!
 //! let publisher = Arc::new(KafkaPublisher::new(
 //!     vec!["localhost:9092".to_string()],
-//!     tx,
-//!     logger.clone(),
-//! ));
+//!     // tx, // This argument is no longer needed for the new KafkaPublisher
+//!     // logger.clone(), // This argument is no longer needed
+//! ).unwrap()); // Add unwrap() or error handling
 //!
 //! let subscriber = Arc::new(KafkaSubscriber::new(
 //!     vec!["localhost:9092".to_string()],
@@ -45,8 +45,8 @@
 //! // Without the "logging" feature
 //! let publisher = Arc::new(KafkaPublisher::new(
 //!     vec!["localhost:9092".to_string()],
-//!     tx,
-//! ));
+//!     // tx, // No longer needed
+//! ).unwrap()); // Add unwrap() or error handling
 //!
 //! let subscriber = Arc::new(KafkaSubscriber::new(
 //!     vec!["localhost:9092".to_string()],
@@ -62,104 +62,63 @@
 use crate::logging::Logger;
 use crate::Message;
 use async_trait::async_trait;
+use rdkafka::config::ClientConfig;
+use rdkafka::producer::{FutureProducer, FutureRecord}; // Removed Producer
+use rdkafka::util::Timeout;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::mpsc;
 
+
 /// Represents possible errors that can occur in Kafka operations.
 #[derive(Error, Debug)]
 pub enum KafkaError {
-    /// Error when sending messages through the channel
-    #[error("Channel send error")]
-    ChannelSend,
-    /// Error when receiving messages from the channel
-    #[error("Channel receive error")]
-    ChannelReceive,
+    #[error("Kafka client creation error: {0}")]
+    ClientCreation(String),
+    #[error("Kafka publish error: {0}")]
+    PublishError(String),
+    #[error("Kafka configuration error: {0}")]
+    ConfigurationError(String),
+    #[error("Kafka receive error: {0}")] // Added ReceiveError
+    ReceiveError(String),
 }
 
 /// Implementation of the Publisher trait for Kafka.
-///
-/// Uses channels for message passing and includes logging capabilities when the
-/// "logging" feature is enabled.
-#[cfg(feature = "logging")]
+#[derive(Clone)] // Added Clone derive
 pub struct KafkaPublisher {
-    tx: mpsc::Sender<Message>,
-    logger: Arc<dyn Logger>,
+    producer: FutureProducer,
 }
 
-/// Implementation of the Publisher trait for Kafka without logging.
-#[cfg(not(feature = "logging"))]
-pub struct KafkaPublisher {
-    tx: mpsc::Sender<Message>,
-}
-
-#[cfg(feature = "logging")]
 impl KafkaPublisher {
-    /// Creates a new KafkaPublisher instance with logging.
-    ///
-    /// # Arguments
-    ///
-    /// * `_brokers` - List of Kafka broker addresses
-    /// * `tx` - Channel sender for messages
-    /// * `logger` - Logger implementation
-    pub fn new(_brokers: Vec<String>, tx: mpsc::Sender<Message>, logger: Arc<dyn Logger>) -> Self {
-        Self { tx, logger }
+    pub fn new(broker_urls: Vec<String>) -> Result<Self, KafkaError> {
+        let producer: FutureProducer = ClientConfig::new()
+            .set("bootstrap.servers", broker_urls.join(","))
+            .set("message.timeout.ms", "5000")
+            .create()
+            .map_err(|e| KafkaError::ClientCreation(e.to_string()))?;
+
+        Ok(Self { producer })
     }
 }
 
-#[cfg(not(feature = "logging"))]
-impl KafkaPublisher {
-    /// Creates a new KafkaPublisher instance without logging.
-    ///
-    /// # Arguments
-    ///
-    /// * `_brokers` - List of Kafka broker addresses
-    /// * `tx` - Channel sender for messages
-    pub fn new(_brokers: Vec<String>, tx: mpsc::Sender<Message>) -> Self {
-        Self { tx }
-    }
-}
-
-#[cfg(feature = "logging")]
 #[async_trait]
-impl super::Publisher for KafkaPublisher {
+impl crate::Publisher for KafkaPublisher {
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
-    async fn publish(&self, _topic: &str, messages: Vec<Message>) -> Result<(), Self::Error> {
-        self.logger
-            .info(&format!(
-                "Publishing {} messages to topic {}",
-                messages.len(),
-                _topic
-            ))
-            .await;
+    async fn publish(&self, topic: &str, messages: Vec<crate::Message>) -> Result<(), Self::Error> {
         for message in messages {
-            self.tx
-                .send(message)
-                .await
-                .map_err(|_| KafkaError::ChannelSend)?;
-        }
-        self.logger
-            .info(&format!(
-                "Successfully published messages to topic {}",
-                _topic
-            ))
-            .await;
-        Ok(())
-    }
-}
+            let record = FutureRecord::to(topic)
+                .payload(&message.payload)
+                .key(&message.uuid);
 
-#[cfg(not(feature = "logging"))]
-#[async_trait]
-impl super::Publisher for KafkaPublisher {
-    type Error = Box<dyn std::error::Error + Send + Sync>;
-
-    async fn publish(&self, _topic: &str, messages: Vec<Message>) -> Result<(), Self::Error> {
-        for message in messages {
-            self.tx
-                .send(message)
-                .await
-                .map_err(|_| KafkaError::ChannelSend)?;
+            match self.producer.send(record, Timeout::Never).await {
+                Ok(_delivery_status) => {
+                    // delivery_status is (partition, offset)
+                }
+                Err((e, _owned_message)) => {
+                    return Err(Box::new(KafkaError::PublishError(e.to_string())));
+                }
+            }
         }
         Ok(())
     }
@@ -243,7 +202,7 @@ impl super::Subscriber for KafkaSubscriber {
             }
             None => {
                 self.logger.error("Channel closed").await;
-                Err(Box::new(KafkaError::ChannelReceive))
+                Err(Box::new(KafkaError::ReceiveError("Channel closed".to_string())))
             }
         }
     }
@@ -262,7 +221,7 @@ impl super::Subscriber for KafkaSubscriber {
         let mut rx_guard = self.rx.lock().await;
         match rx_guard.recv().await {
             Some(message) => Ok(message),
-            None => Err(Box::new(KafkaError::ChannelReceive)),
+            None => Err(Box::new(KafkaError::ReceiveError("Channel closed".to_string()))),
         }
     }
 }
