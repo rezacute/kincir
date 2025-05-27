@@ -9,7 +9,7 @@ This guide will walk you through creating a simple messaging application using K
 
 ## Basic Setup
 
-First, make sure you have added Kincir to your project's dependencies as described in the [Installation](/docs/installation/index.md) guide.
+First, make sure you have added Kincir to your project's dependencies as described in the [Installation]({{ '/docs/installation/index.md' | relative_url }}) guide.
 
 ## Creating a Publisher
 
