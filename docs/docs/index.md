@@ -136,7 +136,7 @@ title: Documentation
           <strong>`MqttTunnelConfig`</strong>:
           <ul>
             <li>`broker_url`: The URL of your MQTT broker (e.g., "mqtt://localhost:1883").</li>
-            <li>`topics`: A `Vec<String>` of MQTT topics to subscribe to.</li>
+            <li>`topics`: A `Vec&lt;String&gt;` of MQTT topics to subscribe to.</li>
             <li>`qos`: The Quality of Service level (u8) for MQTT subscriptions (0, 1, or 2).</li>
           </ul>
         </li>
@@ -149,31 +149,36 @@ title: Documentation
         </li>
       </ol>
       <h3>Example Usage</h3>
-      ```rust,no_run
-use kincir::tunnel::{MqttTunnelConfig, RabbitMQTunnelConfig, MqttToRabbitMQTunnel};
-use std::env;
+      <div class="highlight-wrapper" style="position: relative;" data-language="rust">
+      {% highlight rust %}
+          use kincir::tunnel::{MqttTunnelConfig, RabbitMQTunnelConfig, MqttToRabbitMQTunnel};
+          use std::env;
 
-# async fn run_tunnel() -> Result<(), Box<dyn std::error::Error>> {
-let mqtt_broker_url = "mqtt://localhost:1883";
-let mqtt_topics = vec!["data/source".to_string()];
-let mqtt_qos = 1;
-let mqtt_config = MqttTunnelConfig::new(&mqtt_broker_url, mqtt_topics, mqtt_qos);
+          async fn run_tunnel() -> Result<(), Box<dyn std::error::Error>> {
+          let mqtt_broker_url = "mqtt://localhost:1883";
+          let mqtt_topics = vec!["data/source".to_string()];
+          let mqtt_qos = 1;
+          let mqtt_config = MqttTunnelConfig::new(&mqtt_broker_url, mqtt_topics, mqtt_qos);
 
-let rabbitmq_uri = "amqp://localhost:5672";
-let rabbitmq_routing_key = "iot_data_queue";
-let rabbitmq_config = RabbitMQTunnelConfig::new(&rabbitmq_uri, &rabbitmq_routing_key);
+          let rabbitmq_uri = "amqp://localhost:5672";
+          let rabbitmq_routing_key = "iot_data_queue";
+          let rabbitmq_config = RabbitMQTunnelConfig::new(&rabbitmq_uri, &rabbitmq_routing_key);
 
-let mut tunnel = MqttToRabbitMQTunnel::new(mqtt_config, rabbitmq_config);
+          let mut tunnel = MqttToRabbitMQTunnel::new(mqtt_config, rabbitmq_config);
 
-if let Err(e) = tunnel.run().await {
-    eprintln!("Tunnel encountered an error: {}", e);
-}
-# Ok(())
-# }
-      ```
+          if let Err(e) = tunnel.run().await {
+              eprintln!("Tunnel encountered an error: {}", e);
+          }
+          Ok(())
+          }
+      {% endhighlight %}
+<button class="copy-button manual-copy-btn" onclick="copyCode(this)" aria-label="Copy code to clipboard">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+</button>
+</div>
       <p>For a complete runnable example, please see the `examples/mqtt-to-rabbitmq-example` directory in the repository.</p>
       <h3>Error Handling</h3>
-      <p>The `run` method of the tunnel returns a `Result<(), TunnelError>`. You should handle potential errors such as connection issues, configuration problems, or runtime errors during message processing.</p>
+      <p>The `run` method of the tunnel returns a `ResultVec&lt;(), TunnelError&gt;`. You should handle potential errors such as connection issues, configuration problems, or runtime errors during message processing.</p>
     </div>
 
   <div class="docs-footer">
