@@ -187,3 +187,4 @@ pub use kafka::{KafkaPublisher, KafkaSubscriber, KafkaAckHandle, KafkaAckSubscri
 pub use protobuf::{MessageCodec, ProtobufCodec};
 pub use router::HandlerFunc;
 pub use router::Router;
+pub use router::{AckRouter, AckStrategy, RouterAckConfig, RouterAckStats};
