@@ -65,6 +65,7 @@ mod example;
 mod publisher;
 mod stats;
 mod subscriber;
+mod working_ack_test;
 
 // Re-export public types
 pub use ack::{InMemoryAckHandle, InMemoryAckSubscriber};
