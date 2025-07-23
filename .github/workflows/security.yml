@@ -1,0 +1,366 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ main, v02-01-in-memory-broker ]
+  pull_request:
+    branches: [ main, v02-01-in-memory-broker ]
+  schedule:
+    # Run security audit daily at 3 AM UTC
+    - cron: '0 3 * * *'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Dependency Security Audit
+  dependency-audit:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      
+      - name: Run dependency audit
+        run: |
+          cd kincir
+          cargo audit --json > audit_results.json
+          cargo audit
+      
+      - name: Generate audit report
+        run: |
+          echo "# Security Audit Report" > security_report.md
+          echo "" >> security_report.md
+          echo "## Dependency Audit" >> security_report.md
+          echo "- Audit completed at: $(date)" >> security_report.md
+          echo "- Rust version: $(rustc --version)" >> security_report.md
+          echo "" >> security_report.md
+          
+          if [ -f kincir/audit_results.json ]; then
+            if grep -q '"vulnerabilities":[]' kincir/audit_results.json; then
+              echo "✅ No known vulnerabilities found in dependencies" >> security_report.md
+            else
+              echo "⚠️ Vulnerabilities detected - see detailed report" >> security_report.md
+            fi
+          fi
+      
+      - name: Store audit results
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-audit-${{ github.sha }}
+          path: |
+            kincir/audit_results.json
+            security_report.md
+          retention-days: 90
+      
+      - name: Fail on vulnerabilities
+        run: |
+          cd kincir
+          cargo audit
+
+  # License Compliance Check
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Install cargo-license
+        run: cargo install cargo-license
+      
+      - name: Check licenses
+        run: |
+          cd kincir
+          cargo license --json > licenses.json
+          cargo license
+      
+      - name: Validate license compatibility
+        run: |
+          cd kincir
+          echo "# License Compliance Report" > license_report.md
+          echo "" >> license_report.md
+          echo "## License Summary" >> license_report.md
+          echo "- Check completed at: $(date)" >> license_report.md
+          echo "" >> license_report.md
+          
+          # Check for problematic licenses
+          if grep -q "GPL" licenses.json; then
+            echo "⚠️ GPL licenses detected - review required" >> license_report.md
+          else
+            echo "✅ No GPL licenses detected" >> license_report.md
+          fi
+          
+          if grep -q "AGPL" licenses.json; then
+            echo "⚠️ AGPL licenses detected - review required" >> license_report.md
+          else
+            echo "✅ No AGPL licenses detected" >> license_report.md
+          fi
+          
+          echo "" >> license_report.md
+          echo "## All Licenses" >> license_report.md
+          cargo license >> license_report.md
+      
+      - name: Store license results
+        uses: actions/upload-artifact@v3
+        with:
+          name: license-check-${{ github.sha }}
+          path: |
+            kincir/licenses.json
+            kincir/license_report.md
+          retention-days: 30
+
+  # Code Security Analysis
+  code-security:
+    name: Code Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Run security-focused clippy lints
+        run: |
+          cd kincir
+          cargo clippy --all-targets --all-features -- \
+            -W clippy::integer_arithmetic \
+            -W clippy::panic \
+            -W clippy::unwrap_used \
+            -W clippy::expect_used \
+            -W clippy::indexing_slicing \
+            -W clippy::unreachable \
+            -W clippy::todo \
+            -W clippy::unimplemented \
+            -W clippy::mem_forget \
+            -W clippy::print_stdout \
+            -W clippy::print_stderr \
+            -W clippy::use_debug \
+            -W clippy::dbg_macro \
+            -W clippy::exit \
+            -W clippy::filetype_is_file \
+            -W clippy::create_dir \
+            -W clippy::suspicious \
+            2>&1 | tee security_clippy.log
+      
+      - name: Check for unsafe code
+        run: |
+          cd kincir
+          echo "# Unsafe Code Analysis" > unsafe_report.md
+          echo "" >> unsafe_report.md
+          
+          if grep -r "unsafe" src/; then
+            echo "⚠️ Unsafe code blocks found:" >> unsafe_report.md
+            echo '```' >> unsafe_report.md
+            grep -rn "unsafe" src/ >> unsafe_report.md || true
+            echo '```' >> unsafe_report.md
+          else
+            echo "✅ No unsafe code blocks found" >> unsafe_report.md
+          fi
+      
+      - name: Store security analysis results
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-security-${{ github.sha }}
+          path: |
+            kincir/security_clippy.log
+            kincir/unsafe_report.md
+          retention-days: 30
+
+  # Secrets Scanning
+  secrets-scan:
+    name: Secrets Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for comprehensive scan
+      
+      - name: Install gitleaks
+        run: |
+          wget https://github.com/gitleaks/gitleaks/releases/download/v8.18.0/gitleaks_8.18.0_linux_x64.tar.gz
+          tar -xzf gitleaks_8.18.0_linux_x64.tar.gz
+          sudo mv gitleaks /usr/local/bin/
+      
+      - name: Run gitleaks scan
+        run: |
+          gitleaks detect --source . --report-format json --report-path gitleaks_report.json --verbose || true
+          gitleaks detect --source . --report-format sarif --report-path gitleaks_report.sarif || true
+      
+      - name: Generate secrets report
+        run: |
+          echo "# Secrets Scanning Report" > secrets_report.md
+          echo "" >> secrets_report.md
+          echo "## Gitleaks Analysis" >> secrets_report.md
+          echo "- Scan completed at: $(date)" >> secrets_report.md
+          echo "" >> secrets_report.md
+          
+          if [ -f gitleaks_report.json ]; then
+            if [ -s gitleaks_report.json ]; then
+              echo "⚠️ Potential secrets detected - review required" >> secrets_report.md
+            else
+              echo "✅ No secrets detected" >> secrets_report.md
+            fi
+          else
+            echo "✅ No secrets detected" >> secrets_report.md
+          fi
+      
+      - name: Upload SARIF results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: gitleaks_report.sarif
+        continue-on-error: true
+      
+      - name: Store secrets scan results
+        uses: actions/upload-artifact@v3
+        with:
+          name: secrets-scan-${{ github.sha }}
+          path: |
+            gitleaks_report.json
+            gitleaks_report.sarif
+            secrets_report.md
+          retention-days: 90
+
+  # Supply Chain Security
+  supply-chain:
+    name: Supply Chain Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Install cargo-deny
+        run: cargo install cargo-deny
+      
+      - name: Create deny configuration
+        run: |
+          cat > deny.toml << 'EOF'
+          [licenses]
+          allow = [
+              "MIT",
+              "Apache-2.0",
+              "Apache-2.0 WITH LLVM-exception",
+              "BSD-2-Clause",
+              "BSD-3-Clause",
+              "ISC",
+              "Unicode-DFS-2016",
+          ]
+          deny = [
+              "GPL-2.0",
+              "GPL-3.0",
+              "AGPL-1.0",
+              "AGPL-3.0",
+          ]
+          
+          [bans]
+          multiple-versions = "warn"
+          wildcards = "allow"
+          
+          [advisories]
+          vulnerability = "deny"
+          unmaintained = "warn"
+          yanked = "deny"
+          notice = "warn"
+          
+          [sources]
+          unknown-registry = "deny"
+          unknown-git = "deny"
+          EOF
+      
+      - name: Run supply chain analysis
+        run: |
+          cd kincir
+          cargo deny --manifest-path Cargo.toml check --hide-inclusion-graph 2>&1 | tee supply_chain.log
+      
+      - name: Generate supply chain report
+        run: |
+          echo "# Supply Chain Security Report" > supply_chain_report.md
+          echo "" >> supply_chain_report.md
+          echo "## Cargo Deny Analysis" >> supply_chain_report.md
+          echo "- Analysis completed at: $(date)" >> supply_chain_report.md
+          echo "" >> supply_chain_report.md
+          
+          if grep -q "error" kincir/supply_chain.log; then
+            echo "❌ Supply chain issues detected" >> supply_chain_report.md
+          else
+            echo "✅ No critical supply chain issues detected" >> supply_chain_report.md
+          fi
+          
+          if grep -q "warning" kincir/supply_chain.log; then
+            echo "⚠️ Supply chain warnings present - review recommended" >> supply_chain_report.md
+          fi
+      
+      - name: Store supply chain results
+        uses: actions/upload-artifact@v3
+        with:
+          name: supply-chain-${{ github.sha }}
+          path: |
+            kincir/supply_chain.log
+            supply_chain_report.md
+            deny.toml
+          retention-days: 30
+
+  # Security Summary
+  security-summary:
+    name: Security Summary
+    needs: [dependency-audit, license-check, code-security, secrets-scan, supply-chain]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Generate security summary
+        run: |
+          echo "# Security Audit Summary" > security_summary.md
+          echo "" >> security_summary.md
+          echo "## Test Results" >> security_summary.md
+          echo "- Dependency Audit: ${{ needs.dependency-audit.result }}" >> security_summary.md
+          echo "- License Check: ${{ needs.license-check.result }}" >> security_summary.md
+          echo "- Code Security: ${{ needs.code-security.result }}" >> security_summary.md
+          echo "- Secrets Scan: ${{ needs.secrets-scan.result }}" >> security_summary.md
+          echo "- Supply Chain: ${{ needs.supply-chain.result }}" >> security_summary.md
+          echo "" >> security_summary.md
+          echo "## Overall Status" >> security_summary.md
+          
+          if [[ "${{ needs.dependency-audit.result }}" == "success" && "${{ needs.secrets-scan.result }}" == "success" ]]; then
+            echo "✅ Core security checks passed" >> security_summary.md
+          else
+            echo "❌ Critical security issues detected" >> security_summary.md
+          fi
+          
+          echo "" >> security_summary.md
+          echo "*Security audit completed at $(date)*" >> security_summary.md
+      
+      - name: Store security summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-summary-${{ github.sha }}
+          path: security_summary.md
+          retention-days: 90
+      
+      - name: Comment security summary on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('security_summary.md')) {
+              const report = fs.readFileSync('security_summary.md', 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🔒 Security Audit Summary\n\n${report}\n\n*Security audit run on commit ${context.sha.substring(0, 7)}*`
+              });
+            }

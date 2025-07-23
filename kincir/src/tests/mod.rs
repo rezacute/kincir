@@ -9,6 +9,8 @@ mod kafka_tests;
 mod rabbitmq_tests;
 #[cfg(test)]
 mod mqtt_tests; // Added this line
+#[cfg(test)]
+mod backend_unit_tests; // Added comprehensive backend unit tests
 
 #[cfg(test)]
 mod tests {

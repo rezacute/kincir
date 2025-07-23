@@ -1,4 +1,6 @@
 pub mod ack;
+#[cfg(test)]
+mod tests;
 
 use async_trait::async_trait;
 pub use rumqttc::QoS;

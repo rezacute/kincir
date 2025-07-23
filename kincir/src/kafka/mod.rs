@@ -59,6 +59,8 @@
 //! # }
 
 pub mod ack;
+#[cfg(test)]
+mod tests;
 
 #[cfg(feature = "logging")]
 use crate::logging::Logger;
