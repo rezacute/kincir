@@ -177,7 +177,7 @@ pub use ack::{AckConfig, AckHandle, AckMode, AckStats, AckSubscriber, CompatSubs
 #[cfg(feature = "logging")]
 pub use logging::{Logger, NoOpLogger, StdLogger};
 
-pub use mqtt::{MQTTPublisher, MQTTSubscriber};
+pub use mqtt::{MQTTPublisher, MQTTSubscriber, MQTTAckHandle, MQTTAckSubscriber};
 
 pub use rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber, RabbitMQAckHandle, RabbitMQAckSubscriber};
 
