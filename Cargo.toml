@@ -6,7 +6,8 @@ members = [
     "examples/rabbitmq-example",
     "examples/protobuf-example",
     "examples/mqtt-example",
-    "examples/mqtt-to-kafka-example"
+    "examples/mqtt-to-kafka-example",
+    "examples/in-memory-example"
 ]
 
 [workspace.package]

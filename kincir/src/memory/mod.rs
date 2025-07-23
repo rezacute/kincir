@@ -12,12 +12,13 @@
 //! - Optional statistics collection
 //! - Message ordering guarantees
 //! - Graceful shutdown support
+//! - Publisher and Subscriber trait implementations
 //!
 //! # Example
 //!
 //! ```rust,no_run
-//! use kincir::memory::{InMemoryBroker, InMemoryConfig};
-//! use kincir::Message;
+//! use kincir::memory::{InMemoryBroker, InMemoryConfig, InMemoryPublisher, InMemorySubscriber};
+//! use kincir::{Publisher, Subscriber, Message};
 //! use std::sync::Arc;
 //!
 //! #[tokio::main]
@@ -29,20 +30,26 @@
 //!     
 //!     let broker = Arc::new(InMemoryBroker::new(config));
 //!     
+//!     // Create publisher and subscriber
+//!     let publisher = InMemoryPublisher::new(broker.clone());
+//!     let mut subscriber = InMemorySubscriber::new(broker.clone());
+//!     
 //!     // Subscribe to a topic
-//!     let mut receiver = broker.subscribe("my-topic")?;
+//!     subscriber.subscribe("my-topic").await?;
 //!     
 //!     // Publish messages
 //!     let messages = vec![
 //!         Message::new(b"Hello".to_vec()),
 //!         Message::new(b"World".to_vec()),
 //!     ];
-//!     broker.publish("my-topic", messages)?;
+//!     publisher.publish("my-topic", messages).await?;
 //!     
 //!     // Receive messages
-//!     while let Ok(message) = receiver.recv().await {
-//!         println!("Received: {:?}", String::from_utf8_lossy(&message.payload));
-//!     }
+//!     let message1 = subscriber.receive().await?;
+//!     let message2 = subscriber.receive().await?;
+//!     
+//!     println!("Received: {:?}", String::from_utf8_lossy(&message1.payload));
+//!     println!("Received: {:?}", String::from_utf8_lossy(&message2.payload));
 //!     
 //!     Ok(())
 //! }
@@ -51,14 +58,15 @@
 mod broker;
 mod config;
 mod error;
+mod example;
+mod publisher;
 mod stats;
+mod subscriber;
 
 // Re-export public types
 pub use broker::{InMemoryBroker, TopicInfo};
 pub use config::InMemoryConfig;
 pub use error::InMemoryError;
+pub use publisher::InMemoryPublisher;
 pub use stats::{BrokerStats, StatsSnapshot};
-
-// Publisher and Subscriber implementations will be added in Phase 2
-// pub use publisher::InMemoryPublisher;
-// pub use subscriber::InMemorySubscriber;
+pub use subscriber::InMemorySubscriber;
