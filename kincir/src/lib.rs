@@ -158,6 +158,7 @@ pub trait Subscriber {
 }
 
 pub mod kafka;
+pub mod memory;
 pub mod mqtt;
 pub mod rabbitmq;
 pub mod router;
