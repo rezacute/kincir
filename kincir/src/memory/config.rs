@@ -23,6 +23,12 @@ pub struct InMemoryConfig {
     
     /// Maximum number of subscribers per topic (None = unlimited)
     pub max_subscribers_per_topic: Option<usize>,
+    
+    /// Default message TTL (Time To Live)
+    pub default_message_ttl: Option<Duration>,
+    
+    /// Cleanup interval for expired messages
+    pub cleanup_interval: Duration,
 }
 
 impl Default for InMemoryConfig {
@@ -35,6 +41,8 @@ impl Default for InMemoryConfig {
             default_timeout: Duration::from_secs(30),
             enable_stats: false,
             max_subscribers_per_topic: Some(100), // Default to 100 subscribers per topic
+            default_message_ttl: None, // No TTL by default
+            cleanup_interval: Duration::from_secs(60), // Cleanup every minute
         }
     }
 }
@@ -69,6 +77,11 @@ impl InMemoryConfig {
         self
     }
     
+    /// Enable or disable message ordering (alias)
+    pub fn with_maintain_order(self, enabled: bool) -> Self {
+        self.with_ordering(enabled)
+    }
+    
     /// Set default timeout for operations
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.default_timeout = timeout;
@@ -87,6 +100,18 @@ impl InMemoryConfig {
         self
     }
     
+    /// Set default message TTL
+    pub fn with_message_ttl(mut self, ttl: Option<Duration>) -> Self {
+        self.default_message_ttl = ttl;
+        self
+    }
+    
+    /// Set cleanup interval for expired messages
+    pub fn with_cleanup_interval(mut self, interval: Duration) -> Self {
+        self.cleanup_interval = interval;
+        self
+    }
+    
     /// Create configuration optimized for testing
     pub fn for_testing() -> Self {
         Self {
@@ -97,6 +122,8 @@ impl InMemoryConfig {
             default_timeout: Duration::from_millis(100),
             enable_stats: true,
             max_subscribers_per_topic: Some(5),
+            default_message_ttl: None, // Disable TTL for faster testing
+            cleanup_interval: Duration::from_secs(60), // Less frequent cleanup
         }
     }
     
@@ -110,6 +137,8 @@ impl InMemoryConfig {
             default_timeout: Duration::from_secs(1),
             enable_stats: false,   // Disable stats for better performance
             max_subscribers_per_topic: None, // Unlimited
+            default_message_ttl: None, // No TTL for performance
+            cleanup_interval: Duration::from_secs(300), // Less frequent cleanup
         }
     }
     

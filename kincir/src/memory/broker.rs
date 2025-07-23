@@ -21,35 +21,86 @@ struct TopicData {
     total_published: u64,
     /// Total messages consumed from this topic
     total_consumed: u64,
+    /// Message sequence number for ordering
+    next_sequence: u64,
+    /// Last activity timestamp
+    last_activity: Instant,
 }
 
 impl TopicData {
     fn new() -> Self {
+        let now = Instant::now();
         Self {
             queue: VecDeque::new(),
             subscribers: Vec::new(),
-            created_at: Instant::now(),
+            created_at: now,
             total_published: 0,
             total_consumed: 0,
+            next_sequence: 1,
+            last_activity: now,
         }
     }
     
-    fn add_message(&mut self, message: Message, max_queue_size: Option<usize>) -> Result<(), InMemoryError> {
+    fn add_message(&mut self, mut message: Message, max_queue_size: Option<usize>, add_metadata: bool) -> Result<(), InMemoryError> {
         if let Some(max_size) = max_queue_size {
             if self.queue.len() >= max_size {
                 return Err(InMemoryError::queue_full("topic"));
             }
         }
         
+        // Add sequence number and timestamp only if requested
+        if add_metadata {
+            message.metadata.insert("_sequence".to_string(), self.next_sequence.to_string());
+            self.next_sequence += 1;
+            
+            let now_millis = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis();
+            message.metadata.insert("_enqueued_at".to_string(), now_millis.to_string());
+        }
+        
         self.queue.push_back(message);
         self.total_published += 1;
+        self.last_activity = Instant::now();
         Ok(())
+    }
+    
+    fn cleanup_expired_messages(&mut self, ttl: Duration) -> usize {
+        let now_millis = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis();
+        
+        let ttl_millis = ttl.as_millis();
+        let mut removed_count = 0;
+        
+        // Remove expired messages from the front of the queue
+        while let Some(message) = self.queue.front() {
+            if let Some(enqueued_at_str) = message.metadata.get("_enqueued_at") {
+                if let Ok(enqueued_at) = enqueued_at_str.parse::<u128>() {
+                    if now_millis.saturating_sub(enqueued_at) > ttl_millis {
+                        self.queue.pop_front();
+                        removed_count += 1;
+                        continue;
+                    }
+                }
+            }
+            break; // Stop at first non-expired message (FIFO order)
+        }
+        
+        if removed_count > 0 {
+            self.last_activity = Instant::now();
+        }
+        
+        removed_count
     }
     
     fn take_message(&mut self) -> Option<Message> {
         let message = self.queue.pop_front();
         if message.is_some() {
             self.total_consumed += 1;
+            self.last_activity = Instant::now();
         }
         message
     }
@@ -62,11 +113,13 @@ impl TopicData {
         }
         
         self.subscribers.push(sender);
+        self.last_activity = Instant::now();
         Ok(())
     }
     
     fn remove_subscriber(&mut self, sender_id: &mpsc::UnboundedSender<Message>) {
         self.subscribers.retain(|s| !std::ptr::eq(s, sender_id));
+        self.last_activity = Instant::now();
     }
     
     fn broadcast_message(&mut self, message: &Message) -> Result<(), InMemoryError> {
@@ -82,6 +135,7 @@ impl TopicData {
             }
         }
         
+        self.last_activity = Instant::now();
         Ok(())
     }
     
@@ -91,6 +145,14 @@ impl TopicData {
     
     fn queue_size(&self) -> usize {
         self.queue.len()
+    }
+    
+    fn is_idle(&self, idle_threshold: Duration) -> bool {
+        self.last_activity.elapsed() > idle_threshold
+    }
+    
+    fn next_sequence_number(&self) -> u64 {
+        self.next_sequence
     }
 }
 
@@ -121,11 +183,57 @@ impl InMemoryBroker {
             None
         };
         
+        let topics = Arc::new(RwLock::new(HashMap::new()));
+        let shutdown = Arc::new(RwLock::new(false));
+        
+        // Start cleanup task if TTL is enabled
+        if let Some(ttl) = config.default_message_ttl {
+            let topics_clone = Arc::clone(&topics);
+            let shutdown_clone = Arc::clone(&shutdown);
+            let cleanup_interval = config.cleanup_interval;
+            
+            tokio::spawn(async move {
+                Self::cleanup_task(topics_clone, shutdown_clone, cleanup_interval, ttl).await;
+            });
+        }
+        
         Self {
-            topics: Arc::new(RwLock::new(HashMap::new())),
+            topics,
             config,
             stats,
-            shutdown: Arc::new(RwLock::new(false)),
+            shutdown,
+        }
+    }
+    
+    /// Background task for cleaning up expired messages
+    async fn cleanup_task(
+        topics: Arc<RwLock<HashMap<String, TopicData>>>,
+        shutdown: Arc<RwLock<bool>>,
+        interval: Duration,
+        ttl: Duration,
+    ) {
+        let mut cleanup_interval = tokio::time::interval(interval);
+        
+        loop {
+            cleanup_interval.tick().await;
+            
+            // Check if broker is shutdown
+            if *shutdown.read().unwrap() {
+                break;
+            }
+            
+            // Clean up expired messages
+            let mut topics_guard = topics.write().unwrap();
+            let mut total_removed = 0;
+            
+            for topic_data in topics_guard.values_mut() {
+                total_removed += topic_data.cleanup_expired_messages(ttl);
+            }
+            
+            if total_removed > 0 {
+                #[cfg(feature = "logging")]
+                tracing::debug!("Cleaned up {} expired messages", total_removed);
+            }
         }
     }
     
@@ -149,18 +257,6 @@ impl InMemoryBroker {
         *self.shutdown.read().unwrap()
     }
     
-    /// Shutdown the broker
-    pub fn shutdown(&self) -> Result<(), InMemoryError> {
-        let mut shutdown = self.shutdown.write().unwrap();
-        *shutdown = true;
-        
-        // Clear all topics and notify subscribers
-        let mut topics = self.topics.write().unwrap();
-        topics.clear();
-        
-        Ok(())
-    }
-    
     /// Publish messages to a topic
     pub fn publish(&self, topic: &str, messages: Vec<Message>) -> Result<(), InMemoryError> {
         if self.is_shutdown() {
@@ -174,6 +270,7 @@ impl InMemoryBroker {
             return Err(InMemoryError::invalid_topic_name(topic));
         }
         
+        // Single lock acquisition for the entire operation
         let mut topics = self.topics.write().unwrap();
         
         // Check topic limit
@@ -186,7 +283,7 @@ impl InMemoryBroker {
             }
         }
         
-        // Get or create topic
+        // Get or create topic data
         let topic_data = topics.entry(topic.to_string()).or_insert_with(|| {
             if let Some(stats) = &self.stats {
                 stats.increment_topics_created();
@@ -194,11 +291,23 @@ impl InMemoryBroker {
             TopicData::new()
         });
         
-        // Process messages
-        for message in messages {
+        for mut message in messages {
+            // Add metadata for ordering and timestamps
+            if self.config.maintain_order {
+                message.metadata.insert("_sequence".to_string(), topic_data.next_sequence.to_string());
+                topic_data.next_sequence += 1;
+            }
+            
+            // Add processing timestamp
+            let now_millis = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis();
+            message.metadata.insert("_enqueued_at".to_string(), now_millis.to_string());
+            
             // Add to queue if persistence is enabled
             if self.config.enable_persistence {
-                topic_data.add_message(message.clone(), self.config.max_queue_size)?;
+                topic_data.add_message(message.clone(), self.config.max_queue_size, false)?; // Don't add metadata again
             }
             
             // Broadcast to subscribers
@@ -295,6 +404,8 @@ impl InMemoryBroker {
                 total_published: topic_data.total_published,
                 total_consumed: topic_data.total_consumed,
                 created_at: topic_data.created_at,
+                last_activity: topic_data.last_activity,
+                next_sequence: topic_data.next_sequence_number(),
             })
         } else {
             Err(InMemoryError::topic_not_found(topic))
@@ -344,6 +455,113 @@ impl InMemoryBroker {
     pub fn downgrade(self: &Arc<Self>) -> Weak<Self> {
         Arc::downgrade(self)
     }
+    
+    /// Get all topic information
+    pub fn list_topic_info(&self) -> Vec<TopicInfo> {
+        let topics = self.topics.read().unwrap();
+        topics.iter().map(|(name, data)| {
+            TopicInfo {
+                name: name.clone(),
+                queue_size: data.queue_size(),
+                subscriber_count: data.subscriber_count(),
+                total_published: data.total_published,
+                total_consumed: data.total_consumed,
+                created_at: data.created_at,
+                last_activity: data.last_activity,
+                next_sequence: data.next_sequence_number(),
+            }
+        }).collect()
+    }
+    
+    /// Clean up idle topics (topics with no activity for specified duration)
+    pub fn cleanup_idle_topics(&self, idle_threshold: Duration) -> Result<Vec<String>, InMemoryError> {
+        let mut topics = self.topics.write().unwrap();
+        let mut removed_topics = Vec::new();
+        
+        // Find idle topics
+        let idle_topic_names: Vec<String> = topics.iter()
+            .filter(|(_, data)| data.is_idle(idle_threshold) && data.subscriber_count() == 0)
+            .map(|(name, _)| name.clone())
+            .collect();
+        
+        // Remove idle topics
+        for topic_name in idle_topic_names {
+            if topics.remove(&topic_name).is_some() {
+                removed_topics.push(topic_name);
+                if let Some(stats) = &self.stats {
+                    stats.increment_topics_deleted();
+                }
+            }
+        }
+        
+        Ok(removed_topics)
+    }
+    
+    /// Get broker health information
+    pub fn health_check(&self) -> BrokerHealth {
+        let topics = self.topics.read().unwrap();
+        let total_messages: usize = topics.values().map(|t| t.queue_size()).sum();
+        let total_subscribers: usize = topics.values().map(|t| t.subscriber_count()).sum();
+        
+        // Calculate memory usage while we have the lock
+        let memory_usage_estimate = self.estimate_memory_usage_with_lock(&topics);
+        
+        BrokerHealth {
+            is_healthy: !self.is_shutdown(),
+            topic_count: topics.len(),
+            total_queued_messages: total_messages,
+            total_subscribers,
+            uptime: self.stats.as_ref().map(|s| s.uptime()).unwrap_or_default(),
+            memory_usage_estimate,
+        }
+    }
+    
+    /// Estimate memory usage with existing lock (to avoid deadlock)
+    fn estimate_memory_usage_with_lock(&self, topics: &std::collections::HashMap<String, TopicData>) -> usize {
+        let mut total_size = 0;
+        
+        for (topic_name, topic_data) in topics.iter() {
+            // Topic name size
+            total_size += topic_name.len();
+            
+            // Messages in queue
+            for message in &topic_data.queue {
+                total_size += message.payload.len();
+                total_size += message.uuid.len();
+                for (k, v) in &message.metadata {
+                    total_size += k.len() + v.len();
+                }
+            }
+            
+            // Subscriber channels (rough estimate)
+            total_size += topic_data.subscribers.len() * 64; // Rough channel overhead
+        }
+        
+        total_size
+    }
+    
+    /// Estimate memory usage (rough calculation)
+    fn estimate_memory_usage(&self) -> usize {
+        let topics = self.topics.read().unwrap();
+        self.estimate_memory_usage_with_lock(&topics)
+    }
+    
+    /// Force shutdown (immediate)
+    pub fn force_shutdown(&self) -> Result<(), InMemoryError> {
+        let mut shutdown = self.shutdown.write().unwrap();
+        *shutdown = true;
+        
+        // Clear all topics and notify subscribers
+        let mut topics = self.topics.write().unwrap();
+        topics.clear();
+        
+        Ok(())
+    }
+    
+    /// Shutdown the broker (legacy method, same as force_shutdown)
+    pub fn shutdown(&self) -> Result<(), InMemoryError> {
+        self.force_shutdown()
+    }
 }
 
 /// Information about a topic
@@ -355,11 +573,51 @@ pub struct TopicInfo {
     pub total_published: u64,
     pub total_consumed: u64,
     pub created_at: Instant,
+    pub last_activity: Instant,
+    pub next_sequence: u64,
 }
 
 impl TopicInfo {
     pub fn age(&self) -> Duration {
         self.created_at.elapsed()
+    }
+    
+    pub fn idle_time(&self) -> Duration {
+        self.last_activity.elapsed()
+    }
+    
+    pub fn is_active(&self) -> bool {
+        self.subscriber_count > 0 || self.queue_size > 0
+    }
+    
+    pub fn throughput_rate(&self) -> f64 {
+        let age_secs = self.age().as_secs_f64();
+        if age_secs > 0.0 {
+            self.total_published as f64 / age_secs
+        } else {
+            0.0
+        }
+    }
+}
+
+/// Broker health information
+#[derive(Debug, Clone)]
+pub struct BrokerHealth {
+    pub is_healthy: bool,
+    pub topic_count: usize,
+    pub total_queued_messages: usize,
+    pub total_subscribers: usize,
+    pub uptime: Duration,
+    pub memory_usage_estimate: usize,
+}
+
+impl BrokerHealth {
+    pub fn is_overloaded(&self, max_topics: usize, max_messages: usize) -> bool {
+        self.topic_count > max_topics || self.total_queued_messages > max_messages
+    }
+    
+    pub fn memory_usage_mb(&self) -> f64 {
+        self.memory_usage_estimate as f64 / (1024.0 * 1024.0)
     }
 }
 
@@ -379,8 +637,8 @@ impl Clone for InMemoryBroker {
 mod tests {
     use super::*;
     
-    #[test]
-    fn test_broker_creation() {
+    #[tokio::test]
+    async fn test_broker_creation() {
         let config = InMemoryConfig::for_testing();
         let broker = InMemoryBroker::new(config);
         

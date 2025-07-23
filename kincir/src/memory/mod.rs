@@ -55,6 +55,7 @@
 //! }
 //! ```
 
+mod advanced_tests;
 mod broker;
 mod config;
 mod error;
@@ -64,7 +65,7 @@ mod stats;
 mod subscriber;
 
 // Re-export public types
-pub use broker::{InMemoryBroker, TopicInfo};
+pub use broker::{InMemoryBroker, TopicInfo, BrokerHealth};
 pub use config::InMemoryConfig;
 pub use error::InMemoryError;
 pub use publisher::InMemoryPublisher;

@@ -45,7 +45,19 @@ mod integration_tests {
             let received_order = subscriber.receive().await.unwrap();
             
             assert_eq!(received_order.payload, expected_order.payload);
-            assert_eq!(received_order.metadata, expected_order.metadata);
+            
+            // Check that all expected metadata is present (ignoring system metadata like _sequence, _enqueued_at)
+            for (key, expected_value) in &expected_order.metadata {
+                assert_eq!(
+                    received_order.metadata.get(key),
+                    Some(expected_value),
+                    "Metadata key '{}' mismatch", key
+                );
+            }
+            
+            // Verify system metadata is present
+            assert!(received_order.metadata.contains_key("_sequence"), "Missing _sequence metadata");
+            assert!(received_order.metadata.contains_key("_enqueued_at"), "Missing _enqueued_at metadata");
             
             println!("Processed order: {} for customer: {}", 
                 String::from_utf8_lossy(&received_order.payload),
@@ -275,10 +287,22 @@ mod integration_tests {
         
         let received_message = subscriber.receive().await.unwrap();
         
-        // Verify all metadata is preserved
+        // Verify payload and UUID are preserved
         assert_eq!(received_message.payload, original_message.payload);
-        assert_eq!(received_message.metadata, original_message.metadata);
         assert_eq!(received_message.uuid, original_message.uuid);
+        
+        // Verify all original metadata is preserved (ignoring system metadata)
+        for (key, expected_value) in &original_message.metadata {
+            assert_eq!(
+                received_message.metadata.get(key),
+                Some(expected_value),
+                "Metadata key '{}' mismatch", key
+            );
+        }
+        
+        // Verify system metadata is present
+        assert!(received_message.metadata.contains_key("_sequence"), "Missing _sequence metadata");
+        assert!(received_message.metadata.contains_key("_enqueued_at"), "Missing _enqueued_at metadata");
         
         // Verify specific metadata values
         assert_eq!(received_message.metadata.get("content-type"), Some(&"application/json".to_string()));
