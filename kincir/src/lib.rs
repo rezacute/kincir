@@ -179,6 +179,8 @@ pub use logging::{Logger, NoOpLogger, StdLogger};
 
 pub use mqtt::{MQTTPublisher, MQTTSubscriber};
 
+pub use rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber, RabbitMQAckHandle, RabbitMQAckSubscriber};
+
 #[cfg(feature = "protobuf")]
 pub use protobuf::{MessageCodec, ProtobufCodec};
 pub use router::HandlerFunc;
