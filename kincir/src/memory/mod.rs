@@ -55,6 +55,8 @@
 //! }
 //! ```
 
+mod ack;
+mod ack_tests;
 mod advanced_tests;
 mod broker;
 mod config;
@@ -65,6 +67,7 @@ mod stats;
 mod subscriber;
 
 // Re-export public types
+pub use ack::{InMemoryAckHandle, InMemoryAckSubscriber};
 pub use broker::{InMemoryBroker, TopicInfo, BrokerHealth};
 pub use config::InMemoryConfig;
 pub use error::InMemoryError;

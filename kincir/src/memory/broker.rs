@@ -621,6 +621,107 @@ impl BrokerHealth {
     }
 }
 
+// Additional methods for InMemoryBroker
+impl InMemoryBroker {
+    /// Subscribe to a topic with acknowledgment support
+    /// 
+    /// Returns a receiver that provides messages with acknowledgment handles
+    pub fn subscribe_with_ack(&self, topic: &str) -> Result<tokio::sync::mpsc::UnboundedReceiver<(crate::Message, crate::memory::ack::InMemoryAckHandle)>, InMemoryError> {
+        if self.is_shutdown() {
+            return Err(InMemoryError::BrokerShutdown);
+        }
+        
+        // Validate topic name
+        if topic.is_empty() || topic.contains('\0') {
+            return Err(InMemoryError::invalid_topic_name(topic));
+        }
+        
+        let (_tx, rx) = tokio::sync::mpsc::unbounded_channel();
+        
+        // For now, return the receiver - we'll implement the full logic later
+        // TODO: Implement proper acknowledgment-aware message delivery
+        
+        if let Some(stats) = &self.stats {
+            stats.increment_subscribers_connected();
+        }
+        
+        Ok(rx)
+    }
+    
+    /// Acknowledge a message
+    pub async fn ack_message(&self, _handle: &crate::memory::ack::InMemoryAckHandle) -> Result<(), InMemoryError> {
+        if self.is_shutdown() {
+            return Err(InMemoryError::BrokerShutdown);
+        }
+        
+        // For in-memory broker, acknowledgment means the message was successfully processed
+        if let Some(stats) = &self.stats {
+            stats.increment_messages_consumed(1);
+        }
+        
+        // TODO: Implement message tracking and cleanup if needed
+        Ok(())
+    }
+    
+    /// Negatively acknowledge a message
+    pub async fn nack_message(&self, _handle: &crate::memory::ack::InMemoryAckHandle, requeue: bool) -> Result<(), InMemoryError> {
+        if self.is_shutdown() {
+            return Err(InMemoryError::BrokerShutdown);
+        }
+        
+        if requeue {
+            // Requeue the message for redelivery
+            if let Some(stats) = &self.stats {
+                stats.increment_publish_errors(); // Track as requeue
+            }
+        } else {
+            // Send to dead letter queue or discard
+            if let Some(stats) = &self.stats {
+                stats.increment_consume_errors(); // Track as dead letter
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Acknowledge multiple messages in batch
+    pub async fn ack_batch(&self, handles: &[crate::memory::ack::InMemoryAckHandle]) -> Result<(), InMemoryError> {
+        if self.is_shutdown() {
+            return Err(InMemoryError::BrokerShutdown);
+        }
+        
+        // For batch operations, we can optimize by updating stats in bulk
+        if let Some(stats) = &self.stats {
+            stats.increment_messages_consumed(handles.len() as u64);
+        }
+        
+        // TODO: Implement batch acknowledgment logic
+        Ok(())
+    }
+    
+    /// Negatively acknowledge multiple messages in batch
+    pub async fn nack_batch(&self, _handles: &[crate::memory::ack::InMemoryAckHandle], requeue: bool) -> Result<(), InMemoryError> {
+        if self.is_shutdown() {
+            return Err(InMemoryError::BrokerShutdown);
+        }
+        
+        if requeue {
+            // Batch requeue operation
+            if let Some(stats) = &self.stats {
+                stats.increment_publish_errors(); // Track requeues
+            }
+        } else {
+            // Batch dead letter operation
+            if let Some(stats) = &self.stats {
+                stats.increment_consume_errors(); // Track dead letters
+            }
+        }
+        
+        // TODO: Implement batch nack logic
+        Ok(())
+    }
+}
+
 // Implement Clone for InMemoryBroker to allow sharing
 impl Clone for InMemoryBroker {
     fn clone(&self) -> Self {

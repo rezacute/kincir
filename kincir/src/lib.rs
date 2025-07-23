@@ -157,6 +157,7 @@ pub trait Subscriber {
     async fn receive(&mut self) -> Result<Message, Self::Error>;
 }
 
+pub mod ack;
 pub mod kafka;
 pub mod memory;
 pub mod mqtt;
@@ -171,6 +172,8 @@ pub mod logging;
 pub mod protobuf;
 
 // Re-export commonly used types
+pub use ack::{AckConfig, AckHandle, AckMode, AckStats, AckSubscriber, CompatSubscriber};
+
 #[cfg(feature = "logging")]
 pub use logging::{Logger, NoOpLogger, StdLogger};
 
