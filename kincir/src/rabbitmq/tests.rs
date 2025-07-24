@@ -283,12 +283,7 @@ mod rabbitmq_integration_unit_tests {
         assert_eq!(queue_name, "test-queue");
 
         // Create handle with extracted information
-        let handle = RabbitMQAckHandle::new(
-            message.uuid.clone(),
-            queue_name,
-            delivery_tag,
-            delivery_count,
-            SystemTime::now(),
+        let handle = RabbitMQAckHandle::new(message.uuid.clone(), queue_name, SystemTime::now(, delivery_count, delivery_tag),
         );
 
         assert_eq!(handle.message_id(), message.uuid);
@@ -301,9 +296,9 @@ mod rabbitmq_integration_unit_tests {
     fn test_batch_acknowledgment_logic() {
         // Test the logic for batch acknowledgment with RabbitMQ delivery tags
         let handles = vec![
-            RabbitMQAckHandle::new("msg1".to_string(), "queue".to_string(), 100, 1, SystemTime::now()),
-            RabbitMQAckHandle::new("msg2".to_string(), "queue".to_string(), 101, 1, SystemTime::now()),
-            RabbitMQAckHandle::new("msg3".to_string(), "queue".to_string(), 102, 1, SystemTime::now()),
+            RabbitMQAckHandle::new("msg1".to_string(), "queue".to_string(), SystemTime::now(), 1, 100),
+            RabbitMQAckHandle::new("msg2".to_string(), "queue".to_string(), SystemTime::now(), 1, 101),
+            RabbitMQAckHandle::new("msg3".to_string(), "queue".to_string(), SystemTime::now(), 1, 102),
         ];
 
         // Find the highest delivery tag for batch acknowledgment
@@ -336,12 +331,7 @@ mod rabbitmq_integration_unit_tests {
         ];
 
         for (count, expected_retry) in deliveries {
-            let handle = RabbitMQAckHandle::new(
-                message_id.clone(),
-                queue.clone(),
-                delivery_tag,
-                count,
-                SystemTime::now(),
+            let handle = RabbitMQAckHandle::new(message_id.clone(), queue.clone(), SystemTime::now(, count, delivery_tag),
             );
 
             assert_eq!(handle.is_retry(), expected_retry, 
@@ -413,12 +403,7 @@ mod rabbitmq_performance_unit_tests {
 
     #[test]
     fn test_handle_method_call_performance() {
-        let handle = RabbitMQAckHandle::new(
-            "perf-test".to_string(),
-            "test-queue".to_string(),
-            12345,
-            2,
-            SystemTime::now(),
+        let handle = RabbitMQAckHandle::new("perf-test".to_string(), "test-queue".to_string(), SystemTime::now(), 2, 12345,
         );
 
         let start = std::time::Instant::now();

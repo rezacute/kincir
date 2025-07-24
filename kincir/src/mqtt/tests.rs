@@ -27,10 +27,10 @@ mod mqtt_ack_handle_tests {
         let handle = MQTTAckHandle::new(
             message_id.clone(),
             topic.clone(),
+            timestamp,
+            delivery_count,
             qos,
             packet_id,
-            delivery_count,
-            timestamp,
         );
 
         assert_eq!(handle.message_id(), message_id);
@@ -83,10 +83,10 @@ mod mqtt_ack_handle_tests {
         let handle_first = MQTTAckHandle::new(
             message_id.clone(),
             topic.clone(),
+            timestamp,
+            1, // delivery_count = 1
             qos,
             packet_id,
-            1, // delivery_count = 1
-            timestamp,
         );
         assert!(!handle_first.is_retry());
 
@@ -155,10 +155,10 @@ mod mqtt_ack_handle_tests {
         let handle_qos0 = MQTTAckHandle::new(
             message_id.clone(),
             topic.clone(),
+            timestamp,
+            delivery_count,
             QoS::AtMostOnce,
             None, // No packet ID for QoS 0
-            delivery_count,
-            timestamp,
         );
         assert!(!handle_qos0.requires_ack());
 
@@ -166,10 +166,10 @@ mod mqtt_ack_handle_tests {
         let handle_qos1 = MQTTAckHandle::new(
             message_id.clone(),
             topic.clone(),
+            timestamp,
+            delivery_count,
             QoS::AtLeastOnce,
             Some(123),
-            delivery_count,
-            timestamp,
         );
         assert!(handle_qos1.requires_ack());
 
@@ -177,10 +177,10 @@ mod mqtt_ack_handle_tests {
         let handle_qos2 = MQTTAckHandle::new(
             message_id,
             topic,
+            timestamp,
+            delivery_count,
             QoS::ExactlyOnce,
             Some(456),
-            delivery_count,
-            timestamp,
         );
         assert!(handle_qos2.requires_ack());
     }
@@ -204,10 +204,10 @@ mod mqtt_ack_handle_tests {
             let handle = MQTTAckHandle::new(
                 message_id.clone(),
                 topic.clone(),
+                timestamp,
+                delivery_count,
                 qos,
                 expected_packet_id,
-                delivery_count,
-                timestamp,
             );
 
             assert_eq!(handle.packet_id(), expected_packet_id);
@@ -487,13 +487,7 @@ mod mqtt_integration_unit_tests {
         ];
 
         for topic in topic_patterns {
-            let handle = MQTTAckHandle::new(
-                "topic-test".to_string(),
-                topic.to_string(),
-                QoS::AtLeastOnce,
-                Some(1),
-                1,
-                SystemTime::now(),
+            let handle = MQTTAckHandle::new("topic-test".to_string(), topic.to_string(), SystemTime::now(), 1, QoS::AtLeastOnce, Some(1),
             );
 
             assert_eq!(handle.topic(), topic);
@@ -629,13 +623,7 @@ mod mqtt_performance_unit_tests {
 
     #[test]
     fn test_handle_method_call_performance() {
-        let handle = MQTTAckHandle::new(
-            "perf-test".to_string(),
-            "test/performance".to_string(),
-            QoS::ExactlyOnce,
-            Some(12345),
-            3,
-            SystemTime::now(),
+        let handle = MQTTAckHandle::new("perf-test".to_string(), "test/performance".to_string(), SystemTime::now(), 3, QoS::ExactlyOnce, Some(12345),
         );
 
         let start = std::time::Instant::now();
@@ -692,7 +680,7 @@ mod mqtt_performance_unit_tests {
         }
 
         let elapsed = start.elapsed();
-        let per_iteration = elapsed / iterations;
+        let per_iteration = elapsed / iterations as u32;
 
         // QoS determination should be extremely fast
         assert!(per_iteration < Duration::from_nanos(100), 

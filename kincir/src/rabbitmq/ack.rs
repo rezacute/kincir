@@ -88,6 +88,7 @@ pub struct RabbitMQAckSubscriber {
     logger: Arc<dyn crate::logging::Logger>,
 }
 
+#[derive(Debug)]
 struct SubscriberState {
     /// Current topic subscription
     topic: Option<String>,

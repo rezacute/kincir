@@ -1,9 +1,9 @@
 [package]
 name = "kincir"
-version = "0.1.6"
+version = "0.2.0"
 edition = "2021"
 description = "A Rust message streaming library inspired by Watermill"
-license = "MIT"
+license = "Apache-2.0"
 authors = ["Riza Alaudin Syah <rezaqt@gmail.com>"]
 repository = "https://github.com/rezacute/kincir"
 rust-version = "1.70.0"
