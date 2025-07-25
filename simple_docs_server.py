@@ -27,6 +27,10 @@ class DocsHandler(http.server.SimpleHTTPRequestHandler):
         if self.path == '/':
             self.path = '/index.html'
         
+        # Handle directory paths - add index.html
+        if self.path.endswith('/') and self.path != '/':
+            self.path = self.path + 'index.html'
+        
         # Convert .md requests to .html
         if self.path.endswith('.md'):
             self.path = self.path[:-3] + '.html'
