@@ -46,4 +46,5 @@ perf.data
 perf.data.old
 
 # Amazon Q CLI progress files
+q-progressserver.log
 q-progress
