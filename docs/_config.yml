@@ -56,6 +56,12 @@ exclude:
 sass:
   sass_dir: _sass
   style: compressed
+  load_paths:
+    - _sass
+
+# Custom CSS
+custom_css:
+  - custom
 
 # Plugin settings
 plugins:

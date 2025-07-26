@@ -1,0 +1,10 @@
+[package]
+name = "in-memory-example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+kincir = { path = "../../kincir" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

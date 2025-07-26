@@ -1,0 +1,103 @@
+name: Basic CI
+
+on:
+  push:
+    branches: [ main, develop, v02-* ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Basic compilation check
+  compile:
+    name: Compile Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Check code formatting
+        run: cargo fmt --all -- --check
+        continue-on-error: true
+      
+      - name: Build library only (skip tests)
+        run: cargo build --lib --verbose
+      
+      - name: Build examples
+        run: |
+          for example_dir in examples/*/; do
+            if [ -f "$example_dir/Cargo.toml" ]; then
+              echo "Building example: $example_dir"
+              cd "$example_dir"
+              cargo build --verbose || echo "Example $example_dir failed to build"
+              cd - > /dev/null
+            fi
+          done
+        continue-on-error: true
+
+  # Documentation generation
+  docs:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    needs: compile
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-docs-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-docs-cargo-
+      
+      - name: Build API documentation
+        run: |
+          cargo doc --lib --no-deps --all-features --workspace || echo "Documentation build failed but continuing"
+          echo '<meta http-equiv="refresh" content="0; url=kincir/index.html">' > target/doc/index.html
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Upload documentation artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './target/doc'
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

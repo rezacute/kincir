@@ -58,6 +58,10 @@
 //! # Ok(())
 //! # }
 
+pub mod ack;
+#[cfg(test)]
+mod tests;
+
 #[cfg(feature = "logging")]
 use crate::logging::Logger;
 use crate::Message;
@@ -78,8 +82,12 @@ pub enum KafkaError {
     PublishError(String),
     #[error("Kafka configuration error: {0}")]
     ConfigurationError(String),
-    #[error("Kafka receive error: {0}")] // Added ReceiveError
+    #[error("Kafka receive error: {0}")]
     ReceiveError(String),
+    #[error("Kafka error: {0}")]
+    Kafka(#[from] rdkafka::error::KafkaError),
+    #[error("Serialization error: {0}")]
+    Serialization(String),
 }
 
 /// Implementation of the Publisher trait for Kafka.
@@ -228,3 +236,6 @@ impl super::Subscriber for KafkaSubscriber {
         }
     }
 }
+
+// Re-export acknowledgment types
+pub use ack::{KafkaAckHandle, KafkaAckSubscriber};

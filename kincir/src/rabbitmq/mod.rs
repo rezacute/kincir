@@ -22,6 +22,10 @@
 //!     Ok(())
 //! }
 
+pub mod ack;
+#[cfg(test)]
+mod tests;
+
 #[cfg(feature = "logging")]
 use crate::logging::Logger;
 use crate::Message;
@@ -425,3 +429,6 @@ impl super::Subscriber for RabbitMQSubscriber {
         }
     }
 }
+
+// Re-export acknowledgment types
+pub use ack::{RabbitMQAckHandle, RabbitMQAckSubscriber};

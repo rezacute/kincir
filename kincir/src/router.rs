@@ -5,6 +5,7 @@
 //!
 //! - A flexible `Router` implementation for message handling and routing
 //! - Type definitions for message handler functions
+//! - Acknowledgment-aware routing with `AckRouter` for reliable message processing
 //!
 //! When the "logging" feature is enabled, it also includes integration with the
 //! `Logger` trait from the logging module.
@@ -72,6 +73,8 @@
 //!     router.run().await
 //! # }
 //! # }
+
+pub mod ack;
 
 use crate::Message;
 use std::error::Error;
@@ -356,3 +359,6 @@ impl Router {
         }
     }
 }
+
+// Re-export acknowledgment router types
+pub use ack::{AckRouter, AckStrategy, RouterAckConfig, RouterAckStats};

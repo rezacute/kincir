@@ -73,6 +73,13 @@ title: Documentation
     <div class="docs-section">
       <h2>Message Broker Backends</h2>
       <div class="docs-links">
+        <a href="{{ '/docs/backends/in-memory/' | relative_url }}" class="docs-link featured-link">
+          <div class="docs-link-icon">⚡</div>
+          <div class="docs-link-content">
+            <h3>In-Memory Broker <span class="new-badge">NEW</span></h3>
+            <p>Zero-dependency, high-performance message broker for testing and lightweight production</p>
+          </div>
+        </a>
         <a href="{{ '/docs/backends/kafka/' | relative_url }}" class="docs-link">
           <div class="docs-link-icon">🔗</div>
           <div class="docs-link-content">

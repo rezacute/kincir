@@ -157,7 +157,9 @@ pub trait Subscriber {
     async fn receive(&mut self) -> Result<Message, Self::Error>;
 }
 
+pub mod ack;
 pub mod kafka;
+pub mod memory;
 pub mod mqtt;
 pub mod rabbitmq;
 pub mod router;
@@ -170,12 +172,21 @@ pub mod logging;
 pub mod protobuf;
 
 // Re-export commonly used types
+pub use ack::{AckConfig, AckHandle, AckMode, AckStats, AckSubscriber, CompatSubscriber};
+
 #[cfg(feature = "logging")]
 pub use logging::{Logger, NoOpLogger, StdLogger};
 
-pub use mqtt::{MQTTPublisher, MQTTSubscriber};
+pub use mqtt::{MQTTAckHandle, MQTTAckSubscriber, MQTTPublisher, MQTTSubscriber};
+
+pub use rabbitmq::{
+    RabbitMQAckHandle, RabbitMQAckSubscriber, RabbitMQPublisher, RabbitMQSubscriber,
+};
+
+pub use kafka::{KafkaAckHandle, KafkaAckSubscriber, KafkaPublisher, KafkaSubscriber};
 
 #[cfg(feature = "protobuf")]
 pub use protobuf::{MessageCodec, ProtobufCodec};
 pub use router::HandlerFunc;
 pub use router::Router;
+pub use router::{AckRouter, AckStrategy, RouterAckConfig, RouterAckStats};

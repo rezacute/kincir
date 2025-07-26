@@ -1,3 +1,7 @@
+pub mod ack;
+#[cfg(test)]
+mod tests;
+
 use async_trait::async_trait;
 pub use rumqttc::QoS;
 use rumqttc::{AsyncClient, MqttOptions}; // Removed QoS from here // Publicly re-export QoS
@@ -334,3 +338,6 @@ impl Subscriber for MQTTSubscriber {
 // Here, they are effectively the same type alias.
 // The current code `return Err(Box::new(MQTTError::PublishError(e.to_string())));` is fine
 // because `Box<MQTTError>` can be coerced to `Box<dyn Error ...>`.
+
+// Re-export acknowledgment types
+pub use ack::{MQTTAckHandle, MQTTAckSubscriber};

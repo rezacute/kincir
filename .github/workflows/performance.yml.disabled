@@ -1,0 +1,281 @@
+name: Performance Monitoring
+
+on:
+  push:
+    branches: [ main, v02-01-in-memory-broker ]
+  pull_request:
+    branches: [ main, v02-01-in-memory-broker ]
+    types: [opened, synchronize, labeled]
+  schedule:
+    # Run performance tests weekly on Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Benchmark Performance Tests
+  benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'benchmark') || github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: benchmarks
+      
+      - name: Install criterion
+        run: cargo install cargo-criterion
+      
+      - name: Run memory broker benchmarks
+        run: |
+          cd kincir
+          cargo criterion --bench memory_broker --message-format=json > memory_broker_results.json
+      
+      - name: Run acknowledgment benchmarks
+        run: |
+          cd kincir
+          cargo criterion --bench acknowledgment_performance --message-format=json > ack_performance_results.json
+      
+      - name: Run existing benchmarks
+        run: |
+          cd kincir
+          cargo criterion --bench kincir_benchmarks --message-format=json > kincir_benchmarks_results.json
+      
+      - name: Generate benchmark report
+        run: |
+          echo "# Performance Benchmark Results" > benchmark_report.md
+          echo "" >> benchmark_report.md
+          echo "## Memory Broker Performance" >> benchmark_report.md
+          echo "- Benchmark completed at: $(date)" >> benchmark_report.md
+          echo "- Platform: Ubuntu Latest" >> benchmark_report.md
+          echo "- Rust Version: $(rustc --version)" >> benchmark_report.md
+          echo "" >> benchmark_report.md
+          
+          if [ -f kincir/target/criterion/memory_broker/report/index.html ]; then
+            echo "Memory broker benchmarks completed successfully" >> benchmark_report.md
+          fi
+          
+          if [ -f kincir/target/criterion/acknowledgment_performance/report/index.html ]; then
+            echo "Acknowledgment benchmarks completed successfully" >> benchmark_report.md
+          fi
+      
+      - name: Store benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-results-${{ github.sha }}
+          path: |
+            kincir/*_results.json
+            kincir/target/criterion/
+            benchmark_report.md
+          retention-days: 90
+      
+      - name: Comment benchmark results on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('benchmark_report.md')) {
+              const report = fs.readFileSync('benchmark_report.md', 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 📊 Performance Benchmark Results\n\n${report}\n\n*Benchmarks run on commit ${context.sha.substring(0, 7)}*`
+              });
+            }
+
+  # Load Testing
+  load-testing:
+    name: Load Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'load-test')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Build release binary
+        run: |
+          cd kincir
+          cargo build --release --all-features
+      
+      - name: Run high-throughput load test
+        run: |
+          cd kincir
+          timeout 300s cargo test --release test_high_volume_single_subscriber || true
+          timeout 300s cargo test --release test_concurrent_publishers_single_subscriber || true
+          timeout 300s cargo test --release test_batch_acknowledgment_high_throughput || true
+      
+      - name: Generate load test report
+        run: |
+          echo "# Load Test Results" > load_test_report.md
+          echo "" >> load_test_report.md
+          echo "## High-Throughput Testing" >> load_test_report.md
+          echo "- Test completed at: $(date)" >> load_test_report.md
+          echo "- Configuration: Release build with all features" >> load_test_report.md
+          echo "- Timeout: 5 minutes per test" >> load_test_report.md
+          echo "" >> load_test_report.md
+          echo "Load testing completed. Check test output for detailed results." >> load_test_report.md
+      
+      - name: Store load test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: load-test-results-${{ github.sha }}
+          path: load_test_report.md
+          retention-days: 30
+
+  # Memory Usage Analysis
+  memory-analysis:
+    name: Memory Usage Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'memory-analysis')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Install valgrind
+        run: sudo apt-get update && sudo apt-get install -y valgrind
+      
+      - name: Build with debug symbols
+        run: |
+          cd kincir
+          cargo build --tests
+      
+      - name: Run memory analysis tests
+        run: |
+          cd kincir
+          # Run a subset of tests under valgrind
+          timeout 600s valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all \
+            cargo test test_basic_publish_subscribe --lib 2>&1 | tee memory_analysis.log || true
+      
+      - name: Generate memory report
+        run: |
+          echo "# Memory Analysis Results" > memory_report.md
+          echo "" >> memory_report.md
+          echo "## Valgrind Memory Check" >> memory_report.md
+          echo "- Analysis completed at: $(date)" >> memory_report.md
+          echo "" >> memory_report.md
+          
+          if grep -q "ERROR SUMMARY: 0 errors" memory_analysis.log; then
+            echo "✅ No memory errors detected" >> memory_report.md
+          else
+            echo "⚠️ Memory issues detected - see full log" >> memory_report.md
+          fi
+          
+          if grep -q "All heap blocks were freed" memory_analysis.log; then
+            echo "✅ No memory leaks detected" >> memory_report.md
+          else
+            echo "⚠️ Potential memory leaks - see full log" >> memory_report.md
+          fi
+      
+      - name: Store memory analysis results
+        uses: actions/upload-artifact@v3
+        with:
+          name: memory-analysis-${{ github.sha }}
+          path: |
+            memory_analysis.log
+            memory_report.md
+          retention-days: 30
+
+  # Performance Regression Detection
+  regression-check:
+    name: Performance Regression Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for comparison
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      
+      - name: Install criterion
+        run: cargo install cargo-criterion
+      
+      - name: Run baseline benchmarks (main branch)
+        run: |
+          git checkout main
+          cd kincir
+          cargo criterion --bench memory_broker --message-format=json > baseline_results.json || true
+      
+      - name: Run current benchmarks (PR branch)
+        run: |
+          git checkout ${{ github.head_ref }}
+          cd kincir
+          cargo criterion --bench memory_broker --message-format=json > current_results.json || true
+      
+      - name: Compare performance
+        run: |
+          echo "# Performance Regression Analysis" > regression_report.md
+          echo "" >> regression_report.md
+          echo "## Benchmark Comparison" >> regression_report.md
+          echo "- Baseline: main branch" >> regression_report.md
+          echo "- Current: ${{ github.head_ref }}" >> regression_report.md
+          echo "- Analysis completed at: $(date)" >> regression_report.md
+          echo "" >> regression_report.md
+          
+          if [ -f kincir/baseline_results.json ] && [ -f kincir/current_results.json ]; then
+            echo "Benchmark files found - comparison available" >> regression_report.md
+          else
+            echo "⚠️ Benchmark comparison not available - files missing" >> regression_report.md
+          fi
+      
+      - name: Comment regression analysis on PR
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('regression_report.md')) {
+              const report = fs.readFileSync('regression_report.md', 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🔍 Performance Regression Analysis\n\n${report}\n\n*Analysis run on commit ${context.sha.substring(0, 7)}*`
+              });
+            }
+
+  # Performance Summary
+  performance-summary:
+    name: Performance Summary
+    needs: [benchmarks, load-testing, memory-analysis]
+    runs-on: ubuntu-latest
+    if: always() && (github.event_name == 'schedule' || contains(github.event.pull_request.labels.*.name, 'benchmark'))
+    steps:
+      - name: Generate performance summary
+        run: |
+          echo "# Performance Testing Summary" > performance_summary.md
+          echo "" >> performance_summary.md
+          echo "## Test Results" >> performance_summary.md
+          echo "- Benchmarks: ${{ needs.benchmarks.result }}" >> performance_summary.md
+          echo "- Load Testing: ${{ needs.load-testing.result }}" >> performance_summary.md
+          echo "- Memory Analysis: ${{ needs.memory-analysis.result }}" >> performance_summary.md
+          echo "" >> performance_summary.md
+          echo "## Summary" >> performance_summary.md
+          
+          if [[ "${{ needs.benchmarks.result }}" == "success" ]]; then
+            echo "✅ Performance benchmarks completed successfully" >> performance_summary.md
+          else
+            echo "❌ Performance benchmarks failed or were skipped" >> performance_summary.md
+          fi
+          
+          echo "" >> performance_summary.md
+          echo "*Performance testing completed at $(date)*" >> performance_summary.md
+      
+      - name: Store performance summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-summary-${{ github.sha }}
+          path: performance_summary.md
+          retention-days: 90

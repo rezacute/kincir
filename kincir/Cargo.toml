@@ -1,11 +1,12 @@
 [package]
 name = "kincir"
-version = "0.1.6"
+version = "0.2.0"
 edition = "2021"
 description = "A Rust message streaming library inspired by Watermill"
-license = "MIT"
+license = "Apache-2.0"
 authors = ["Riza Alaudin Syah <rezaqt@gmail.com>"]
 repository = "https://github.com/rezacute/kincir"
+rust-version = "1.70.0"
 
 [features]
 default = ["logging"]
@@ -37,7 +38,32 @@ tracing-subscriber = { version = "0.3", features = ["fmt"] }
 tokio-amqp = "2.0" # Also in [dependencies]
 futures = "0.3"    # Also in [dependencies]
 futures-util = { version = "0.3" } # Removed features = ["stream"]
+tokio-test = "0.4"
+proptest = "1.0"
+tempfile = "3.0"
+chrono = { version = "0.4", features = ["serde"] }
+rand = "0.8"
 
 [[bench]]
 name = "kincir_benchmarks"
+harness = false
+
+[[bench]]
+name = "memory_broker"
+harness = false
+
+[[bench]]
+name = "acknowledgment_performance"
+harness = false
+
+[[bench]]
+name = "router_performance"
+harness = false
+
+[[bench]]
+name = "concurrent_operations"
+harness = false
+
+[[bench]]
+name = "backend_comparison"
 harness = false
