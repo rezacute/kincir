@@ -1,0 +1,151 @@
+name: Simple CI/CD
+
+on:
+  push:
+    branches: [ main, develop, v02-* ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Basic compilation and testing
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      
+      - name: Build project
+        run: cargo build --verbose
+      
+      - name: Run tests
+        run: cargo test --verbose
+
+  # Documentation generation and deployment
+  docs:
+    name: Generate and Deploy Docs
+    runs-on: ubuntu-latest
+    # Only run on main branch pushes
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build-and-test
+    
+    # Required for GitHub Pages deployment
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    # Prevent concurrent deployments
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-docs-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-docs-cargo-
+      
+      - name: Build API documentation
+        run: |
+          cargo doc --no-deps --all-features --workspace
+          echo '<meta http-equiv="refresh" content="0; url=kincir/index.html">' > target/doc/index.html
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Upload documentation artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './target/doc'
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # Optional: Release automation (only on tags)
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build-and-test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-release-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-release-cargo-
+      
+      - name: Build release
+        run: cargo build --release --verbose
+      
+      - name: Run release tests
+        run: cargo test --release --verbose
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body: |
+            ## Kincir Release ${{ github.ref_name }}
+            
+            ### Installation
+            ```bash
+            cargo add kincir
+            ```
+            
+            ### Documentation
+            - [API Documentation](https://rezacute.github.io/kincir/)
+            - [Getting Started Guide](https://github.com/rezacute/kincir#getting-started)
+            
+            See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
