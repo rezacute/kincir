@@ -1,3 +1,9 @@
+---
+layout: default
+title: Kincir - High-Performance Rust Message Streaming
+description: Unified message streaming library for Rust with support for multiple broker backends
+---
+
 # Kincir
 
 **Building event-driven applications the easy way in Rust**
@@ -13,16 +19,13 @@ Kincir is a unified message streaming library for Rust that provides a consisten
 ### 🔧 Unified Interface
 A simple, consistent API for publishing and subscribing to messages across different messaging systems.
 
-### 👥 Multiple Backends  
-Support for Kafka, RabbitMQ, MQTT, and in-memory brokers with a single, consistent API.
+### 🚀 Multiple Backends
+Support for Kafka, RabbitMQ, MQTT, and in-memory brokers with the same interface.
 
-### 📡 Message Routing
-Powerful message routing capabilities with customizable handlers for complex event processing.
+### 🔒 Message Acknowledgments
+Comprehensive acknowledgment support across all backends for reliable message processing.
 
-### ⚙️ Optional Features
-Customize your build with optional feature flags for logging, Protocol Buffers support, and more.
-
-### 🔄 Event-Driven Architecture
+### 🎯 Event-Driven Architecture
 Build robust event-driven applications with reliable message passing and processing.
 
 ### 📊 High Performance
@@ -39,7 +42,7 @@ Add Kincir to your `Cargo.toml`:
 kincir = "0.2.0"
 ```
 
-### Basic Usage
+### Basic Example
 
 ```rust
 use kincir::memory::{InMemoryBroker, InMemoryPublisher, InMemorySubscriber};
@@ -54,15 +57,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut subscriber = InMemorySubscriber::new(broker.clone());
 
     // Subscribe to a topic
-    subscriber.subscribe("orders").await?;
+    subscriber.subscribe("events").await?;
     
     // Publish a message
-    let message = Message::new(b"Order #1234".to_vec());
-    publisher.publish("orders", vec![message]).await?;
+    let message = Message::new(b"Hello, Kincir!".to_vec());
+    publisher.publish("events", vec![message]).await?;
     
     // Receive the message
     let received = subscriber.receive().await?;
-    println!("Received: {:?}", received);
+    println!("Received: {:?}", String::from_utf8_lossy(&received.payload));
     
     Ok(())
 }
@@ -70,42 +73,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
 ---
 
-## What's New in v0.2.0
-
-### ✅ In-Memory Message Broker
-- Zero-dependency, high-performance broker for testing and lightweight production
-- Sub-millisecond message delivery latency (2-3µs average)
-- Handles 100,000+ messages/second throughput
-- Thread-safe concurrent operations with deadlock resolution
-
-### ✅ Message Acknowledgments
-- Comprehensive acknowledgment support across RabbitMQ, Kafka, and MQTT backends
-- Reliable message processing with ack/nack capabilities
-- Error handling and retry mechanisms
-
-### ✅ MQTT Support
-- Full MQTT implementation with Quality of Service (QoS) handling
-- Perfect for IoT and real-time applications
-- MQTT to RabbitMQ tunneling support
-
-### ✅ Advanced Features
-- Message ordering and TTL (Time-To-Live)
-- Health monitoring and comprehensive statistics
-- Built-in logging support with customizable levels
-- Message UUID generation for tracking
-
----
-
 ## Supported Backends
 
-| Backend | Status | Features |
-|---------|--------|----------|
-| **In-Memory** | ✅ Complete | High-performance, zero-dependency, testing-friendly |
-| **RabbitMQ** | ✅ Complete | AMQP protocol, acknowledgments, routing |
-| **Kafka** | ✅ Complete | High-throughput, partitioning, consumer groups |
-| **MQTT** | ✅ Complete | IoT-focused, QoS levels, lightweight |
-| **NATS** | 🔄 Planned | Cloud-native messaging |
-| **AWS SQS** | 🔄 Planned | Managed queue service |
+| Backend | Publisher | Subscriber | Acknowledgments | Status |
+|---------|-----------|------------|-----------------|--------|
+| **In-Memory** | ✅ | ✅ | ✅ | Stable |
+| **RabbitMQ** | ✅ | ✅ | ✅ | Stable |
+| **Kafka** | ✅ | ✅ | ✅ | Stable |
+| **MQTT** | ✅ | ✅ | ✅ | Stable |
 
 ---
 
@@ -113,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
 Kincir provides a unified interface that abstracts away the complexity of different message brokers:
 
-```
+```text
 ┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐
 │   Application   │    │    Kincir    │    │  Message Broker │
 │                 │    │   Unified    │    │                 │
@@ -124,16 +99,22 @@ Kincir provides a unified interface that abstracts away the complexity of differ
 
 ---
 
-## Performance Benchmarks
+## Why Kincir?
 
-### In-Memory Broker Performance
-- **Latency**: 2-3µs average message delivery
-- **Throughput**: 100,000+ messages/second
-- **Memory Usage**: Minimal overhead with efficient data structures
-- **Concurrency**: Full thread-safety with deadlock resolution
+### vs. Direct Broker APIs
+- **Unified Interface**: Switch between brokers without changing your application code
+- **Simplified Development**: One API to learn instead of multiple broker-specific APIs
+- **Future-Proof**: Add new brokers without changing existing code
 
-### Comparison with Other Solutions
-- **vs. Watermill (Go)**: Feature parity with better performance
+### vs. Other Messaging Libraries
+- **Rust-First**: Built specifically for Rust with zero-cost abstractions
+- **Comprehensive**: Supports acknowledgments, routing, and advanced features
+- **Performance**: No overhead compared to direct broker usage
+- **Type Safety**: Leverages Rust's type system for safer message handling
+
+### Comparison
+
+- **vs. Watermill (Go)**: Similar feature set but with Rust's performance and safety
 - **vs. Direct Broker APIs**: Simplified interface with no performance penalty
 - **vs. Other Rust Libraries**: More comprehensive feature set
 
@@ -148,31 +129,50 @@ Kincir is evolving towards **feature parity with Watermill (Golang)** while leve
 - ✅ Advanced features: message ordering, TTL, health monitoring
 - ✅ Comprehensive statistics and performance metrics
 - ✅ Thread-safe concurrent operations with deadlock resolution
+- ✅ Unit & integration tests for stability (65/65 tests passing)
 
-### 🔄 v0.3 – Middleware & Backend Expansion *(IN PROGRESS)*
+### 🔄 v0.3 – Middleware & Backend Expansion  
 - Middleware framework: logging, retry, recovery, correlation  
-- Additional broker support (NATS, AWS SQS)  
+- Additional broker support (e.g., NATS, AWS SQS)  
 - Optimized async pipeline for lower latency  
+- Integration tests for middleware + new backends  
 
-### 📊 v0.4 – Distributed Tracing & Monitoring
+### 📊 v0.4 – Distributed Tracing & Monitoring  
 - OpenTelemetry-based tracing for message flows  
 - Prometheus metrics for message processing  
 - Poison queue (dead-letter handling)  
 - Throttling & backpressure support  
+- Stress testing and performance benchmarking  
 
-### 🚀 v1.0 – Production-Ready Release
+### 🛠 v0.5 – Hardening & API Freeze  
+- API finalization for stability  
+- Cross-platform testing (Linux, macOS, Windows)  
+- Memory optimization and async efficiency improvements  
+- Comprehensive documentation and migration guide  
+
+### 🚀 v1.0 – Production-Ready Release  
 - High-performance, production-ready messaging library  
 - Fully stable API with semantic versioning  
-- Complete Watermill feature parity  
+- Complete Watermill feature parity (middleware, observability, routing)  
 - Extensive test coverage and robust CI/CD pipeline  
+- Community engagement and ecosystem expansion  
 
 ---
 
-## Community & Support
+## Getting Started
 
-- **Documentation**: [docs.rs/kincir](https://docs.rs/kincir)
-- **Repository**: [github.com/rezacute/kincir](https://github.com/rezacute/kincir)
-- **Crate**: [crates.io/crates/kincir](https://crates.io/crates/kincir)
+Ready to dive in? Check out our comprehensive documentation:
+
+- **[Getting Started Guide](/docs/getting-started.html)** - Complete setup and basic usage
+- **[Examples](/examples/)** - Comprehensive examples for all backends
+- **[API Documentation](https://docs.rs/kincir)** - Full API reference
+
+### Quick Links
+
+- **Documentation**: [Getting Started](/docs/getting-started.html)
+- **Examples**: [Comprehensive Examples](/examples/)
+- **GitHub**: [Source Code](https://github.com/rezacute/kincir)
+- **Crates.io**: [Package](https://crates.io/crates/kincir)
 - **Issues**: [GitHub Issues](https://github.com/rezacute/kincir/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/rezacute/kincir/discussions)
 
