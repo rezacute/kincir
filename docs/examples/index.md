@@ -1,3 +1,9 @@
+---
+layout: default
+title: Kincir Examples
+description: Comprehensive examples demonstrating Kincir features and use cases
+---
+
 # Kincir Examples
 
 This section contains practical examples demonstrating various Kincir features and use cases.
@@ -8,85 +14,55 @@ This section contains practical examples demonstrating various Kincir features a
 Learn how to use the high-performance in-memory broker for testing and lightweight production scenarios.
 
 ### [RabbitMQ Integration](/examples/rabbitmq.html)
-Complete example of integrating Kincir with RabbitMQ for reliable message queuing.
+Complete guide to integrating with RabbitMQ including message acknowledgments and advanced routing.
 
 ### [Kafka Integration](/examples/kafka.html)
-High-throughput message streaming with Apache Kafka backend.
+High-throughput message streaming with Apache Kafka, including consumer groups and exactly-once semantics.
 
-### [MQTT IoT Example](/examples/mqtt.html)
-IoT device communication using MQTT with Quality of Service levels.
+### [MQTT Support](/examples/mqtt.html)
+IoT messaging with MQTT, including QoS levels and device communication patterns.
 
 ## Advanced Examples
 
 ### [Message Acknowledgments](/examples/acknowledgments.html)
-Reliable message processing with acknowledgment patterns across different backends.
+Comprehensive guide to reliable message processing with acknowledgments across all backends.
 
 ### [Message Routing](/examples/routing.html)
-Advanced message routing with custom handlers and middleware.
+Advanced message routing patterns and transformation techniques.
 
 ### [Error Handling](/examples/error-handling.html)
-Comprehensive error handling strategies for production applications.
+Best practices for handling errors and implementing retry strategies.
 
 ### [Performance Optimization](/examples/performance.html)
-Tips and techniques for optimizing Kincir performance in high-load scenarios.
+Tips and techniques for optimizing message throughput and latency.
 
-## Real-World Use Cases
-
-### [Microservices Communication](/examples/microservices.html)
-Using Kincir for inter-service communication in a microservices architecture.
-
-### [Event Sourcing](/examples/event-sourcing.html)
-Implementing event sourcing patterns with Kincir's message streaming capabilities.
-
-### [CQRS Implementation](/examples/cqrs.html)
-Command Query Responsibility Segregation using Kincir for command and event handling.
-
-### [IoT Data Pipeline](/examples/iot-pipeline.html)
-Building a complete IoT data processing pipeline with MQTT and message routing.
+### [Monitoring and Observability](/examples/monitoring.html)
+Setting up monitoring, metrics, and distributed tracing for your message flows.
 
 ## Integration Examples
 
-### [Web Application Integration](/examples/web-integration.html)
-Integrating Kincir with web frameworks like Axum, Warp, and Actix-web.
-
-### [Database Integration](/examples/database.html)
-Combining Kincir with databases for event-driven data processing.
-
-### [Monitoring and Observability](/examples/monitoring.html)
-Adding monitoring, metrics, and distributed tracing to Kincir applications.
-
-## Testing Examples
+### [Microservices Communication](/examples/microservices.html)
+Patterns for service-to-service communication in microservices architectures.
 
 ### [Unit Testing](/examples/unit-testing.html)
-Best practices for unit testing Kincir-based applications.
-
-### [Integration Testing](/examples/integration-testing.html)
-Testing message flows and broker integrations.
-
-### [Load Testing](/examples/load-testing.html)
-Performance testing strategies for Kincir applications.
+Testing strategies and patterns for applications using Kincir.
 
 ---
 
-## Running the Examples
+## Getting Started
 
-All examples are available in the [GitHub repository](https://github.com/rezacute/kincir/tree/main/examples).
+If you're new to Kincir, we recommend starting with:
 
-To run an example:
+1. **[In-Memory Broker Example](/examples/in-memory.html)** - No external dependencies
+2. **[Getting Started Guide](/docs/getting-started.html)** - Complete setup guide
+3. **[Message Acknowledgments](/examples/acknowledgments.html)** - Reliable processing
 
-```bash
-git clone https://github.com/rezacute/kincir.git
-cd kincir/examples/basic-usage
-cargo run
-```
+## Need Help?
 
-## Prerequisites
+- **[GitHub Issues](https://github.com/rezacute/kincir/issues)** - Report bugs or request features
+- **[GitHub Discussions](https://github.com/rezacute/kincir/discussions)** - Ask questions and share ideas
+- **[API Documentation](https://docs.rs/kincir)** - Complete API reference
 
-Most examples require:
-- Rust 1.70 or later
-- Tokio async runtime
-- Specific broker software (RabbitMQ, Kafka, etc.) for backend examples
+---
 
-## Contributing Examples
-
-We welcome contributions of new examples! Please see our [Contributing Guide](https://github.com/rezacute/kincir/blob/main/CONTRIBUTING.md) for guidelines.
+*All examples are tested and ready to run. Copy the code and start building!*

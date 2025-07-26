@@ -1,3 +1,9 @@
+---
+layout: default
+title: In-Memory Broker Example
+description: Zero-dependency, high-performance message broker for testing and development
+---
+
 # In-Memory Broker Example
 
 The in-memory broker is Kincir's zero-dependency, high-performance message broker perfect for testing, development, and lightweight production scenarios.
