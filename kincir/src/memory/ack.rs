@@ -43,12 +43,12 @@ impl InMemoryAckHandle {
             handle_id: Uuid::new_v4().to_string(),
         }
     }
-    
+
     /// Get the internal handle ID
     pub fn handle_id(&self) -> &str {
         &self.handle_id
     }
-    
+
     /// Get a weak reference to the broker
     pub fn broker_ref(&self) -> &Weak<InMemoryBroker> {
         &self.broker_ref
@@ -59,15 +59,15 @@ impl AckHandle for InMemoryAckHandle {
     fn message_id(&self) -> &str {
         &self.message_id
     }
-    
+
     fn topic(&self) -> &str {
         &self.topic
     }
-    
+
     fn timestamp(&self) -> SystemTime {
         self.timestamp
     }
-    
+
     fn delivery_count(&self) -> u32 {
         self.delivery_count
     }
@@ -99,18 +99,18 @@ impl InMemoryAckSubscriber {
             }),
         }
     }
-    
+
     /// Get the broker reference
     pub fn broker(&self) -> &Arc<InMemoryBroker> {
         &self.broker
     }
-    
+
     /// Check if currently subscribed to a topic
     pub async fn is_subscribed(&self) -> bool {
         let state = self.state.lock().await;
         state.subscribed_topic.is_some()
     }
-    
+
     /// Get the currently subscribed topic
     pub async fn subscribed_topic(&self) -> Option<String> {
         let state = self.state.lock().await;
@@ -127,19 +127,19 @@ impl AckSubscriber for InMemoryAckSubscriber {
         if self.broker.is_shutdown() {
             return Err(InMemoryError::BrokerShutdown);
         }
-        
+
         // Validate topic name
         if topic.is_empty() || topic.contains('\0') {
             return Err(InMemoryError::invalid_topic_name(topic));
         }
-        
+
         // Create acknowledgment-aware receiver
         let receiver = self.broker.subscribe_with_ack(topic)?;
-        
+
         let mut state = self.state.lock().await;
         state.receiver = Some(receiver);
         state.subscribed_topic = Some(topic.to_string());
-        
+
         Ok(())
     }
 
@@ -147,13 +147,13 @@ impl AckSubscriber for InMemoryAckSubscriber {
         if self.broker.is_shutdown() {
             return Err(InMemoryError::BrokerShutdown);
         }
-        
+
         // Take the receiver out temporarily to avoid holding the lock during await
         let mut receiver = {
             let mut state = self.state.lock().await;
             state.receiver.take()
         };
-        
+
         if let Some(ref mut rx) = receiver {
             let result = match rx.recv().await {
                 Some((message, handle)) => {
@@ -171,11 +171,11 @@ impl AckSubscriber for InMemoryAckSubscriber {
                     Err(InMemoryError::channel_receive_error("Channel closed"))
                 }
             };
-            
+
             // Put the receiver back
             let mut state = self.state.lock().await;
             state.receiver = receiver;
-            
+
             result
         } else {
             if let Some(stats) = self.broker.stats() {
@@ -210,7 +210,11 @@ impl AckSubscriber for InMemoryAckSubscriber {
         Ok(())
     }
 
-    async fn nack_batch(&self, handles: Vec<Self::AckHandle>, requeue: bool) -> Result<(), Self::Error> {
+    async fn nack_batch(
+        &self,
+        handles: Vec<Self::AckHandle>,
+        requeue: bool,
+    ) -> Result<(), Self::Error> {
         // For now, use the default implementation that calls nack individually
         // TODO: Implement proper batch optimization later
         for handle in handles {
@@ -239,7 +243,7 @@ mod tests {
     async fn test_ack_handle_creation() {
         let broker = Arc::new(InMemoryBroker::new(InMemoryConfig::for_testing()));
         let broker_ref = Arc::downgrade(&broker);
-        
+
         let handle = InMemoryAckHandle::new(
             "msg-123".to_string(),
             "test-topic".to_string(),
@@ -247,34 +251,40 @@ mod tests {
             1,
             broker_ref,
         );
-        
+
         assert_eq!(handle.message_id(), "msg-123");
         assert_eq!(handle.topic(), "test-topic");
         assert_eq!(handle.delivery_count(), 1);
         assert!(!handle.is_retry());
     }
-    
+
     #[tokio::test]
     async fn test_ack_subscriber_creation() {
         let broker = Arc::new(InMemoryBroker::new(InMemoryConfig::for_testing()));
         let subscriber = InMemoryAckSubscriber::new(broker.clone());
-        
+
         assert!(!subscriber.is_subscribed().await);
         assert_eq!(subscriber.subscribed_topic().await, None);
         assert_eq!(Arc::as_ptr(subscriber.broker()), Arc::as_ptr(&broker));
     }
-    
+
     #[tokio::test]
     async fn test_subscribe_validation() {
         let broker = Arc::new(InMemoryBroker::new(InMemoryConfig::for_testing()));
         let subscriber = InMemoryAckSubscriber::new(broker);
-        
+
         // Test empty topic name
         let result = subscriber.subscribe("").await;
-        assert!(matches!(result, Err(InMemoryError::InvalidTopicName { .. })));
-        
+        assert!(matches!(
+            result,
+            Err(InMemoryError::InvalidTopicName { .. })
+        ));
+
         // Test topic with null character
         let result = subscriber.subscribe("test\0topic").await;
-        assert!(matches!(result, Err(InMemoryError::InvalidTopicName { .. })));
+        assert!(matches!(
+            result,
+            Err(InMemoryError::InvalidTopicName { .. })
+        ));
     }
 }

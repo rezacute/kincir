@@ -177,11 +177,13 @@ pub use ack::{AckConfig, AckHandle, AckMode, AckStats, AckSubscriber, CompatSubs
 #[cfg(feature = "logging")]
 pub use logging::{Logger, NoOpLogger, StdLogger};
 
-pub use mqtt::{MQTTPublisher, MQTTSubscriber, MQTTAckHandle, MQTTAckSubscriber};
+pub use mqtt::{MQTTAckHandle, MQTTAckSubscriber, MQTTPublisher, MQTTSubscriber};
 
-pub use rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber, RabbitMQAckHandle, RabbitMQAckSubscriber};
+pub use rabbitmq::{
+    RabbitMQAckHandle, RabbitMQAckSubscriber, RabbitMQPublisher, RabbitMQSubscriber,
+};
 
-pub use kafka::{KafkaPublisher, KafkaSubscriber, KafkaAckHandle, KafkaAckSubscriber};
+pub use kafka::{KafkaAckHandle, KafkaAckSubscriber, KafkaPublisher, KafkaSubscriber};
 
 #[cfg(feature = "protobuf")]
 pub use protobuf::{MessageCodec, ProtobufCodec};

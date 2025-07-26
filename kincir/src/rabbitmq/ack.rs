@@ -5,7 +5,7 @@ use crate::rabbitmq::RabbitMQError;
 use crate::Message;
 use async_trait::async_trait;
 use futures::StreamExt;
-use lapin::options::{BasicAckOptions, BasicNackOptions, BasicConsumeOptions, QueueDeclareOptions};
+use lapin::options::{BasicAckOptions, BasicConsumeOptions, BasicNackOptions, QueueDeclareOptions};
 use lapin::types::FieldTable;
 use lapin::{Connection, Consumer};
 use std::sync::Arc;
@@ -47,12 +47,12 @@ impl RabbitMQAckHandle {
             handle_id: Uuid::new_v4().to_string(),
         }
     }
-    
+
     /// Get the RabbitMQ delivery tag
     pub fn delivery_tag(&self) -> u64 {
         self.delivery_tag
     }
-    
+
     /// Get the internal handle ID
     pub fn handle_id(&self) -> &str {
         &self.handle_id
@@ -63,15 +63,15 @@ impl AckHandle for RabbitMQAckHandle {
     fn message_id(&self) -> &str {
         &self.message_id
     }
-    
+
     fn topic(&self) -> &str {
         &self.topic
     }
-    
+
     fn timestamp(&self) -> SystemTime {
         self.timestamp
     }
-    
+
     fn delivery_count(&self) -> u32 {
         self.delivery_count
     }
@@ -194,7 +194,10 @@ impl AckSubscriber for RabbitMQAckSubscriber {
     async fn subscribe(&self, topic: &str) -> Result<(), Self::Error> {
         #[cfg(feature = "logging")]
         self.logger
-            .info(&format!("Subscribing to topic {} with acknowledgment support", topic))
+            .info(&format!(
+                "Subscribing to topic {} with acknowledgment support",
+                topic
+            ))
             .await;
 
         // Create a new channel for this subscription
@@ -244,7 +247,9 @@ impl AckSubscriber for RabbitMQAckSubscriber {
 
     async fn receive_with_ack(&mut self) -> Result<(Message, Self::AckHandle), Self::Error> {
         #[cfg(feature = "logging")]
-        self.logger.info("Waiting to receive message with acknowledgment").await;
+        self.logger
+            .info("Waiting to receive message with acknowledgment")
+            .await;
 
         // Take the consumer out temporarily to avoid holding the lock during await
         let mut consumer = {
@@ -294,14 +299,18 @@ impl AckSubscriber for RabbitMQAckSubscriber {
                 let mut state = self.state.lock().await;
                 state.consumer = consumer;
 
-                Err(Box::new(RabbitMQError::RabbitMQ(
-                    lapin::Error::InvalidChannelState(lapin::ChannelState::Error),
-                )) as Box<dyn std::error::Error + Send + Sync>)
+                Err(
+                    Box::new(RabbitMQError::RabbitMQ(lapin::Error::InvalidChannelState(
+                        lapin::ChannelState::Error,
+                    ))) as Box<dyn std::error::Error + Send + Sync>,
+                )
             }
         } else {
-            Err(Box::new(RabbitMQError::RabbitMQ(
-                lapin::Error::InvalidChannelState(lapin::ChannelState::Error),
-            )) as Box<dyn std::error::Error + Send + Sync>)
+            Err(
+                Box::new(RabbitMQError::RabbitMQ(lapin::Error::InvalidChannelState(
+                    lapin::ChannelState::Error,
+                ))) as Box<dyn std::error::Error + Send + Sync>,
+            )
         }
     }
 
@@ -358,7 +367,11 @@ impl AckSubscriber for RabbitMQAckSubscriber {
         Ok(())
     }
 
-    async fn nack_batch(&self, handles: Vec<Self::AckHandle>, requeue: bool) -> Result<(), Self::Error> {
+    async fn nack_batch(
+        &self,
+        handles: Vec<Self::AckHandle>,
+        requeue: bool,
+    ) -> Result<(), Self::Error> {
         #[cfg(feature = "logging")]
         self.logger
             .info(&format!(
@@ -406,14 +419,14 @@ mod tests {
             1,
             12345,
         );
-        
+
         assert_eq!(handle.message_id(), "msg-123");
         assert_eq!(handle.topic(), "test-topic");
         assert_eq!(handle.delivery_count(), 1);
         assert!(!handle.is_retry());
         assert_eq!(handle.delivery_tag(), 12345);
     }
-    
+
     #[test]
     fn test_rabbitmq_ack_handle_retry() {
         let handle = RabbitMQAckHandle::new(
@@ -423,11 +436,11 @@ mod tests {
             3,
             67890,
         );
-        
+
         assert_eq!(handle.delivery_count(), 3);
         assert!(handle.is_retry());
     }
-    
+
     // Note: Integration tests with actual RabbitMQ would require a running RabbitMQ instance
     // These would be added to a separate integration test suite
 }

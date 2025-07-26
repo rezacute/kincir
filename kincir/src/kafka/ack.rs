@@ -6,7 +6,7 @@ use crate::Message;
 use async_trait::async_trait;
 use rdkafka::consumer::{Consumer, StreamConsumer};
 use rdkafka::message::BorrowedMessage;
-use rdkafka::{ClientConfig, TopicPartitionList, Message as KafkaMessage};
+use rdkafka::{ClientConfig, Message as KafkaMessage, TopicPartitionList};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -52,17 +52,17 @@ impl KafkaAckHandle {
             handle_id: Uuid::new_v4().to_string(),
         }
     }
-    
+
     /// Get the Kafka partition
     pub fn partition(&self) -> i32 {
         self.partition
     }
-    
+
     /// Get the Kafka offset
     pub fn offset(&self) -> i64 {
         self.offset
     }
-    
+
     /// Get the internal handle ID
     pub fn handle_id(&self) -> &str {
         &self.handle_id
@@ -73,15 +73,15 @@ impl AckHandle for KafkaAckHandle {
     fn message_id(&self) -> &str {
         &self.message_id
     }
-    
+
     fn topic(&self) -> &str {
         &self.topic
     }
-    
+
     fn timestamp(&self) -> SystemTime {
         self.timestamp
     }
-    
+
     fn delivery_count(&self) -> u32 {
         self.delivery_count
     }
@@ -114,10 +114,7 @@ struct SubscriberState {
 impl KafkaAckSubscriber {
     /// Create a new Kafka acknowledgment subscriber
     #[cfg(not(feature = "logging"))]
-    pub async fn new(
-        brokers: Vec<String>,
-        group_id: String,
-    ) -> Result<Self, KafkaError> {
+    pub async fn new(brokers: Vec<String>, group_id: String) -> Result<Self, KafkaError> {
         let consumer: StreamConsumer = ClientConfig::new()
             .set("group.id", &group_id)
             .set("bootstrap.servers", brokers.join(","))
@@ -142,10 +139,7 @@ impl KafkaAckSubscriber {
 
     /// Create a new Kafka acknowledgment subscriber with logging
     #[cfg(feature = "logging")]
-    pub async fn new(
-        brokers: Vec<String>,
-        group_id: String,
-    ) -> Result<Self, KafkaError> {
+    pub async fn new(brokers: Vec<String>, group_id: String) -> Result<Self, KafkaError> {
         let consumer: StreamConsumer = ClientConfig::new()
             .set("group.id", &group_id)
             .set("bootstrap.servers", brokers.join(","))
@@ -201,10 +195,17 @@ impl KafkaAckSubscriber {
     }
 
     /// Commit a specific offset for a topic/partition
-    async fn commit_offset(&self, topic: &str, partition: i32, offset: i64) -> Result<(), KafkaError> {
+    async fn commit_offset(
+        &self,
+        topic: &str,
+        partition: i32,
+        offset: i64,
+    ) -> Result<(), KafkaError> {
         let mut tpl = TopicPartitionList::new();
         tpl.add_partition_offset(topic, partition, rdkafka::Offset::Offset(offset + 1))
-            .map_err(|e| KafkaError::ConfigurationError(format!("Failed to add partition offset: {:?}", e)))?;
+            .map_err(|e| {
+                KafkaError::ConfigurationError(format!("Failed to add partition offset: {:?}", e))
+            })?;
 
         self.consumer
             .commit(&tpl, rdkafka::consumer::CommitMode::Sync)
@@ -212,13 +213,18 @@ impl KafkaAckSubscriber {
 
         // Update committed offset tracking
         let mut state = self.state.lock().await;
-        state.committed_offsets.insert((topic.to_string(), partition), offset);
+        state
+            .committed_offsets
+            .insert((topic.to_string(), partition), offset);
 
         Ok(())
     }
 
     /// Commit multiple offsets in batch
-    async fn commit_offsets_batch(&self, offsets: Vec<(String, i32, i64)>) -> Result<(), KafkaError> {
+    async fn commit_offsets_batch(
+        &self,
+        offsets: Vec<(String, i32, i64)>,
+    ) -> Result<(), KafkaError> {
         if offsets.is_empty() {
             return Ok(());
         }
@@ -226,7 +232,12 @@ impl KafkaAckSubscriber {
         let mut tpl = TopicPartitionList::new();
         for (topic, partition, offset) in &offsets {
             tpl.add_partition_offset(topic, *partition, rdkafka::Offset::Offset(offset + 1))
-                .map_err(|e| KafkaError::ConfigurationError(format!("Failed to add partition offset: {:?}", e)))?;
+                .map_err(|e| {
+                    KafkaError::ConfigurationError(format!(
+                        "Failed to add partition offset: {:?}",
+                        e
+                    ))
+                })?;
         }
 
         self.consumer
@@ -244,7 +255,8 @@ impl KafkaAckSubscriber {
 
     /// Convert Kafka message to Kincir message
     fn convert_message(&self, kafka_msg: &BorrowedMessage) -> Result<Message, KafkaError> {
-        let payload = kafka_msg.payload()
+        let payload = kafka_msg
+            .payload()
             .ok_or_else(|| KafkaError::Serialization("Empty message payload".to_string()))?
             .to_vec();
 
@@ -267,13 +279,16 @@ impl AckSubscriber for KafkaAckSubscriber {
     async fn subscribe(&self, topic: &str) -> Result<(), Self::Error> {
         #[cfg(feature = "logging")]
         self.logger
-            .info(&format!("Subscribing to Kafka topic {} with acknowledgment support", topic))
+            .info(&format!(
+                "Subscribing to Kafka topic {} with acknowledgment support",
+                topic
+            ))
             .await;
 
         // Subscribe to the topic
-        self.consumer
-            .subscribe(&[topic])
-            .map_err(|e| Box::new(KafkaError::Kafka(e)) as Box<dyn std::error::Error + Send + Sync>)?;
+        self.consumer.subscribe(&[topic]).map_err(|e| {
+            Box::new(KafkaError::Kafka(e)) as Box<dyn std::error::Error + Send + Sync>
+        })?;
 
         // Update state
         let mut state = self.state.lock().await;
@@ -291,24 +306,29 @@ impl AckSubscriber for KafkaAckSubscriber {
 
     async fn receive_with_ack(&mut self) -> Result<(Message, Self::AckHandle), Self::Error> {
         #[cfg(feature = "logging")]
-        self.logger.info("Waiting to receive Kafka message with acknowledgment").await;
+        self.logger
+            .info("Waiting to receive Kafka message with acknowledgment")
+            .await;
 
         use futures::StreamExt;
 
-        let kafka_msg = self.consumer
+        let kafka_msg = self
+            .consumer
             .stream()
             .next()
             .await
             .ok_or_else(|| {
-                Box::new(KafkaError::Kafka(rdkafka::error::KafkaError::NoMessageReceived))
-                    as Box<dyn std::error::Error + Send + Sync>
+                Box::new(KafkaError::Kafka(
+                    rdkafka::error::KafkaError::NoMessageReceived,
+                )) as Box<dyn std::error::Error + Send + Sync>
             })?
             .map_err(|e| {
                 Box::new(KafkaError::Kafka(e)) as Box<dyn std::error::Error + Send + Sync>
             })?;
 
         // Convert Kafka message to Kincir message
-        let message = self.convert_message(&kafka_msg)
+        let message = self
+            .convert_message(&kafka_msg)
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
         // Create acknowledgment handle
@@ -363,7 +383,11 @@ impl AckSubscriber for KafkaAckSubscriber {
 
         // Remove from pending acknowledgments
         let mut state = self.state.lock().await;
-        let key = (handle.topic().to_string(), handle.partition(), handle.offset());
+        let key = (
+            handle.topic().to_string(),
+            handle.partition(),
+            handle.offset(),
+        );
         state.pending_acks.remove(&key);
 
         Ok(())
@@ -403,7 +427,11 @@ impl AckSubscriber for KafkaAckSubscriber {
 
         // Remove from pending acknowledgments
         let mut state = self.state.lock().await;
-        let key = (handle.topic().to_string(), handle.partition(), handle.offset());
+        let key = (
+            handle.topic().to_string(),
+            handle.partition(),
+            handle.offset(),
+        );
         state.pending_acks.remove(&key);
 
         Ok(())
@@ -412,7 +440,10 @@ impl AckSubscriber for KafkaAckSubscriber {
     async fn ack_batch(&self, handles: Vec<Self::AckHandle>) -> Result<(), Self::Error> {
         #[cfg(feature = "logging")]
         self.logger
-            .info(&format!("Batch acknowledging {} Kafka messages", handles.len()))
+            .info(&format!(
+                "Batch acknowledging {} Kafka messages",
+                handles.len()
+            ))
             .await;
 
         if handles.is_empty() {
@@ -421,7 +452,7 @@ impl AckSubscriber for KafkaAckSubscriber {
 
         // Group by topic/partition and find the highest offset for each
         let mut max_offsets: HashMap<(String, i32), i64> = HashMap::new();
-        
+
         for handle in &handles {
             let key = (handle.topic().to_string(), handle.partition());
             let current_max = max_offsets.get(&key).copied().unwrap_or(-1);
@@ -443,14 +474,22 @@ impl AckSubscriber for KafkaAckSubscriber {
         // Remove from pending acknowledgments
         let mut state = self.state.lock().await;
         for handle in handles {
-            let key = (handle.topic().to_string(), handle.partition(), handle.offset());
+            let key = (
+                handle.topic().to_string(),
+                handle.partition(),
+                handle.offset(),
+            );
             state.pending_acks.remove(&key);
         }
 
         Ok(())
     }
 
-    async fn nack_batch(&self, handles: Vec<Self::AckHandle>, requeue: bool) -> Result<(), Self::Error> {
+    async fn nack_batch(
+        &self,
+        handles: Vec<Self::AckHandle>,
+        requeue: bool,
+    ) -> Result<(), Self::Error> {
         #[cfg(feature = "logging")]
         self.logger
             .info(&format!(
@@ -480,7 +519,11 @@ impl AckSubscriber for KafkaAckSubscriber {
         // Remove from pending acknowledgments
         let mut state = self.state.lock().await;
         for handle in handles {
-            let key = (handle.topic().to_string(), handle.partition(), handle.offset());
+            let key = (
+                handle.topic().to_string(),
+                handle.partition(),
+                handle.offset(),
+            );
             state.pending_acks.remove(&key);
         }
 
@@ -503,7 +546,7 @@ mod tests {
             0,
             12345,
         );
-        
+
         assert_eq!(handle.message_id(), "msg-123");
         assert_eq!(handle.topic(), "test-topic");
         assert_eq!(handle.delivery_count(), 1);
@@ -512,7 +555,7 @@ mod tests {
         assert_eq!(handle.offset(), 12345);
         assert!(!handle.handle_id().is_empty());
     }
-    
+
     #[test]
     fn test_kafka_ack_handle_retry() {
         let handle = KafkaAckHandle::new(
@@ -523,13 +566,13 @@ mod tests {
             1,
             67890,
         );
-        
+
         assert_eq!(handle.delivery_count(), 3);
         assert!(handle.is_retry());
         assert_eq!(handle.partition(), 1);
         assert_eq!(handle.offset(), 67890);
     }
-    
+
     // Note: Integration tests with actual Kafka would require a running Kafka instance
     // These would be added to a separate integration test suite
 }

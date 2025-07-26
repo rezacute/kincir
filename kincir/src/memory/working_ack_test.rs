@@ -15,19 +15,28 @@ mod working_tests {
     fn create_test_message(content: &str) -> Message {
         Message::new(content.as_bytes().to_vec())
             .with_metadata("test", "true")
-            .with_metadata("created_at", &std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs().to_string())
+            .with_metadata(
+                "created_at",
+                &std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+                    .to_string(),
+            )
     }
 
     #[tokio::test]
     async fn test_basic_acknowledgment_workflow() {
         println!("🧪 Testing basic acknowledgment workflow...");
-        
+
         let broker = Arc::new(InMemoryBroker::with_default_config());
         let publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
         let mut subscriber = InMemoryAckSubscriber::new(broker.clone());
 
         // Subscribe to test topic
-        subscriber.subscribe("basic_test").await
+        subscriber
+            .subscribe("basic_test")
+            .await
             .expect("Failed to subscribe");
 
         // Verify subscription
@@ -38,20 +47,22 @@ mod working_tests {
 
         // Publish test message
         let test_message = create_test_message("Basic acknowledgment test");
-        publisher.publish("basic_test", vec![test_message.clone()]).await
+        publisher
+            .publish("basic_test", vec![test_message.clone()])
+            .await
             .expect("Failed to publish message");
 
         // Receive message with acknowledgment handle
-        let result = timeout(
-            Duration::from_secs(5),
-            subscriber.receive_with_ack()
-        ).await;
+        let result = timeout(Duration::from_secs(5), subscriber.receive_with_ack()).await;
 
         match result {
             Ok(Ok((received_message, ack_handle))) => {
                 // Verify message content
                 assert_eq!(received_message.payload, test_message.payload);
-                assert_eq!(received_message.metadata.get("test"), Some(&"true".to_string()));
+                assert_eq!(
+                    received_message.metadata.get("test"),
+                    Some(&"true".to_string())
+                );
 
                 // Verify acknowledgment handle properties
                 assert!(!ack_handle.message_id().is_empty());
@@ -60,7 +71,9 @@ mod working_tests {
                 assert!(!ack_handle.is_retry());
 
                 // Acknowledge message
-                subscriber.ack(ack_handle).await
+                subscriber
+                    .ack(ack_handle)
+                    .await
                     .expect("Failed to acknowledge message");
 
                 println!("✅ Basic acknowledgment workflow test passed");
@@ -77,12 +90,14 @@ mod working_tests {
     #[tokio::test]
     async fn test_batch_acknowledgment_basic() {
         println!("🧪 Testing basic batch acknowledgment...");
-        
+
         let broker = Arc::new(InMemoryBroker::with_default_config());
         let publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
         let mut subscriber = InMemoryAckSubscriber::new(broker.clone());
 
-        subscriber.subscribe("batch_test").await
+        subscriber
+            .subscribe("batch_test")
+            .await
             .expect("Failed to subscribe");
 
         // Test small batch
@@ -92,7 +107,9 @@ mod working_tests {
             test_messages.push(create_test_message(&format!("Batch message {}", i + 1)));
         }
 
-        publisher.publish("batch_test", test_messages.clone()).await
+        publisher
+            .publish("batch_test", test_messages.clone())
+            .await
             .expect("Failed to publish batch");
 
         // Receive all messages
@@ -115,7 +132,9 @@ mod working_tests {
 
         // Batch acknowledge
         let ack_start = std::time::Instant::now();
-        subscriber.ack_batch(handles).await
+        subscriber
+            .ack_batch(handles)
+            .await
             .expect("Failed to batch acknowledge messages");
         let ack_duration = ack_start.elapsed();
 
@@ -128,22 +147,28 @@ mod working_tests {
     #[tokio::test]
     async fn test_negative_acknowledgment_basic() {
         println!("🧪 Testing basic negative acknowledgment...");
-        
+
         let broker = Arc::new(InMemoryBroker::with_default_config());
         let publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
         let mut subscriber = InMemoryAckSubscriber::new(broker.clone());
 
-        subscriber.subscribe("nack_test").await
+        subscriber
+            .subscribe("nack_test")
+            .await
             .expect("Failed to subscribe");
 
         // Test nack without requeue
         let message1 = create_test_message("Nack test message 1");
-        publisher.publish("nack_test", vec![message1]).await
+        publisher
+            .publish("nack_test", vec![message1])
+            .await
             .expect("Failed to publish message");
 
         match timeout(Duration::from_secs(5), subscriber.receive_with_ack()).await {
             Ok(Ok((_, handle1))) => {
-                subscriber.nack(handle1, false).await
+                subscriber
+                    .nack(handle1, false)
+                    .await
                     .expect("Failed to nack message without requeue");
             }
             Ok(Err(e)) => {
@@ -156,12 +181,16 @@ mod working_tests {
 
         // Test nack with requeue
         let message2 = create_test_message("Nack test message 2");
-        publisher.publish("nack_test", vec![message2]).await
+        publisher
+            .publish("nack_test", vec![message2])
+            .await
             .expect("Failed to publish message");
 
         match timeout(Duration::from_secs(5), subscriber.receive_with_ack()).await {
             Ok(Ok((_, handle2))) => {
-                subscriber.nack(handle2, true).await
+                subscriber
+                    .nack(handle2, true)
+                    .await
                     .expect("Failed to nack message with requeue");
             }
             Ok(Err(e)) => {
@@ -178,7 +207,7 @@ mod working_tests {
     #[tokio::test]
     async fn test_concurrent_acknowledgment_simple() {
         println!("🧪 Testing simple concurrent acknowledgment...");
-        
+
         let broker = Arc::new(InMemoryBroker::with_default_config());
         let publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
 
@@ -186,19 +215,28 @@ mod working_tests {
         let mut subscriber1 = InMemoryAckSubscriber::new(broker.clone());
         let mut subscriber2 = InMemoryAckSubscriber::new(broker.clone());
 
-        subscriber1.subscribe("concurrent_test").await
+        subscriber1
+            .subscribe("concurrent_test")
+            .await
             .expect("Failed to subscribe subscriber1");
-        subscriber2.subscribe("concurrent_test").await
+        subscriber2
+            .subscribe("concurrent_test")
+            .await
             .expect("Failed to subscribe subscriber2");
 
         // Publish messages
         let message_count = 4;
         let mut test_messages = Vec::new();
         for i in 0..message_count {
-            test_messages.push(create_test_message(&format!("Concurrent message {}", i + 1)));
+            test_messages.push(create_test_message(&format!(
+                "Concurrent message {}",
+                i + 1
+            )));
         }
 
-        publisher.publish("concurrent_test", test_messages).await
+        publisher
+            .publish("concurrent_test", test_messages)
+            .await
             .expect("Failed to publish messages");
 
         // Try to receive messages with both subscribers
@@ -208,7 +246,9 @@ mod working_tests {
         for _ in 0..2 {
             match timeout(Duration::from_secs(2), subscriber1.receive_with_ack()).await {
                 Ok(Ok((_, handle))) => {
-                    subscriber1.ack(handle).await
+                    subscriber1
+                        .ack(handle)
+                        .await
                         .expect("Failed to acknowledge message");
                     total_received += 1;
                 }
@@ -220,7 +260,9 @@ mod working_tests {
         for _ in 0..2 {
             match timeout(Duration::from_secs(2), subscriber2.receive_with_ack()).await {
                 Ok(Ok((_, handle))) => {
-                    subscriber2.ack(handle).await
+                    subscriber2
+                        .ack(handle)
+                        .await
                         .expect("Failed to acknowledge message");
                     total_received += 1;
                 }
@@ -228,10 +270,16 @@ mod working_tests {
             }
         }
 
-        println!("  Total messages received: {} / {}", total_received, message_count);
-        
+        println!(
+            "  Total messages received: {} / {}",
+            total_received, message_count
+        );
+
         // We expect at least some messages to be processed
-        assert!(total_received > 0, "At least some messages should be processed");
+        assert!(
+            total_received > 0,
+            "At least some messages should be processed"
+        );
 
         println!("✅ Simple concurrent acknowledgment test passed");
     }
@@ -239,24 +287,31 @@ mod working_tests {
     #[tokio::test]
     async fn test_acknowledgment_performance_simple() {
         println!("🧪 Testing simple acknowledgment performance...");
-        
+
         let broker = Arc::new(InMemoryBroker::with_default_config());
         let publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
         let mut subscriber = InMemoryAckSubscriber::new(broker.clone());
 
-        subscriber.subscribe("performance_test").await
+        subscriber
+            .subscribe("performance_test")
+            .await
             .expect("Failed to subscribe");
 
         // Test with moderate message count
         let message_count = 50;
         let mut test_messages = Vec::new();
         for i in 0..message_count {
-            test_messages.push(create_test_message(&format!("Performance message {}", i + 1)));
+            test_messages.push(create_test_message(&format!(
+                "Performance message {}",
+                i + 1
+            )));
         }
 
         // Publish messages
         let publish_start = std::time::Instant::now();
-        publisher.publish("performance_test", test_messages).await
+        publisher
+            .publish("performance_test", test_messages)
+            .await
             .expect("Failed to publish messages");
         let publish_duration = publish_start.elapsed();
 
@@ -268,7 +323,9 @@ mod working_tests {
             match timeout(Duration::from_secs(10), subscriber.receive_with_ack()).await {
                 Ok(Ok((_, handle))) => {
                     let ack_start = std::time::Instant::now();
-                    subscriber.ack(handle).await
+                    subscriber
+                        .ack(handle)
+                        .await
                         .expect("Failed to acknowledge message");
                     let ack_duration = ack_start.elapsed();
                     ack_times.push(ack_duration);
@@ -295,8 +352,15 @@ mod working_tests {
         println!("    Throughput: {:.2} msg/sec", throughput);
 
         // Verify performance expectations
-        assert!(throughput > 10.0, "Throughput should be > 10 msg/sec, got {:.2}", throughput);
-        assert!(avg_ack_time.as_millis() < 50, "Average ack time should be < 50ms");
+        assert!(
+            throughput > 10.0,
+            "Throughput should be > 10 msg/sec, got {:.2}",
+            throughput
+        );
+        assert!(
+            avg_ack_time.as_millis() < 50,
+            "Average ack time should be < 50ms"
+        );
 
         println!("✅ Simple acknowledgment performance test passed");
     }
@@ -304,7 +368,7 @@ mod working_tests {
     #[tokio::test]
     async fn test_multi_topic_acknowledgment() {
         println!("🧪 Testing multi-topic acknowledgment...");
-        
+
         let broker = Arc::new(InMemoryBroker::with_default_config());
         let publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
         let mut subscriber = InMemoryAckSubscriber::new(broker.clone());
@@ -312,7 +376,9 @@ mod working_tests {
         // Subscribe to multiple topics
         let topics = vec!["topic1", "topic2", "topic3"];
         for topic in &topics {
-            subscriber.subscribe(topic).await
+            subscriber
+                .subscribe(topic)
+                .await
                 .expect(&format!("Failed to subscribe to {}", topic));
         }
 
@@ -324,13 +390,19 @@ mod working_tests {
         // Publish messages to different topics
         let messages_per_topic = 2;
         let mut total_expected = 0;
-        
+
         for (i, topic) in topics.iter().enumerate() {
             let mut topic_messages = Vec::new();
             for j in 0..messages_per_topic {
-                topic_messages.push(create_test_message(&format!("Topic {} message {}", i + 1, j + 1)));
+                topic_messages.push(create_test_message(&format!(
+                    "Topic {} message {}",
+                    i + 1,
+                    j + 1
+                )));
             }
-            publisher.publish(topic, topic_messages).await
+            publisher
+                .publish(topic, topic_messages)
+                .await
                 .expect(&format!("Failed to publish to {}", topic));
             total_expected += messages_per_topic;
         }
@@ -351,17 +423,26 @@ mod working_tests {
                     panic!("Failed to receive message {}: {:?}", i + 1, e);
                 }
                 Err(_) => {
-                    println!("Timeout waiting for message {} (received {} so far)", i + 1, received_count);
+                    println!(
+                        "Timeout waiting for message {} (received {} so far)",
+                        i + 1,
+                        received_count
+                    );
                     break;
                 }
             }
         }
 
-        println!("  Received {} / {} messages", received_count, total_expected);
+        println!(
+            "  Received {} / {} messages",
+            received_count, total_expected
+        );
 
         // Acknowledge all received messages
         if !handles.is_empty() {
-            subscriber.ack_batch(handles).await
+            subscriber
+                .ack_batch(handles)
+                .await
                 .expect("Failed to batch acknowledge messages");
         }
 
@@ -374,24 +455,30 @@ mod working_tests {
     #[tokio::test]
     async fn test_acknowledgment_system_validation() {
         println!("🚀 Running acknowledgment system validation...");
-        
+
         let broker = Arc::new(InMemoryBroker::with_default_config());
         let publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
         let mut subscriber = InMemoryAckSubscriber::new(broker.clone());
 
         // Test complete workflow
-        subscriber.subscribe("validation_test").await
+        subscriber
+            .subscribe("validation_test")
+            .await
             .expect("Failed to subscribe");
 
         // Test 1: Single message workflow
         let test_message = create_test_message("Validation test message");
-        publisher.publish("validation_test", vec![test_message.clone()]).await
+        publisher
+            .publish("validation_test", vec![test_message.clone()])
+            .await
             .expect("Failed to publish message");
 
         match timeout(Duration::from_secs(5), subscriber.receive_with_ack()).await {
             Ok(Ok((received_message, ack_handle))) => {
                 assert_eq!(received_message.payload, test_message.payload);
-                subscriber.ack(ack_handle).await
+                subscriber
+                    .ack(ack_handle)
+                    .await
                     .expect("Failed to acknowledge message");
                 println!("  ✅ Single message workflow validated");
             }
@@ -405,8 +492,10 @@ mod working_tests {
             create_test_message("Batch message 2"),
             create_test_message("Batch message 3"),
         ];
-        
-        publisher.publish("validation_test", batch_messages.clone()).await
+
+        publisher
+            .publish("validation_test", batch_messages.clone())
+            .await
             .expect("Failed to publish batch");
 
         let mut batch_handles = Vec::new();
@@ -420,7 +509,9 @@ mod working_tests {
             }
         }
 
-        subscriber.ack_batch(batch_handles).await
+        subscriber
+            .ack_batch(batch_handles)
+            .await
             .expect("Failed to batch acknowledge");
         println!("  ✅ Batch workflow validated");
 

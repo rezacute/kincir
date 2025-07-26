@@ -50,7 +50,7 @@ mod mqtt_ack_handle_tests {
         let timestamp = SystemTime::now();
 
         let qos_test_cases = vec![
-            (QoS::AtMostOnce, None, false),      // QoS 0 - no packet ID, no ack required
+            (QoS::AtMostOnce, None, false), // QoS 0 - no packet ID, no ack required
             (QoS::AtLeastOnce, Some(100), true), // QoS 1 - has packet ID, ack required
             (QoS::ExactlyOnce, Some(200), true), // QoS 2 - has packet ID, ack required
         ];
@@ -103,11 +103,7 @@ mod mqtt_ack_handle_tests {
 
         // Multiple retries
         let handle_multiple_retry = MQTTAckHandle::new(
-            message_id,
-            topic,
-            qos,
-            packet_id,
-            5, // delivery_count = 5
+            message_id, topic, qos, packet_id, 5, // delivery_count = 5
             timestamp,
         );
         assert!(handle_multiple_retry.is_retry());
@@ -131,14 +127,8 @@ mod mqtt_ack_handle_tests {
             timestamp,
         );
 
-        let handle2 = MQTTAckHandle::new(
-            message_id,
-            topic,
-            qos,
-            packet_id,
-            delivery_count,
-            timestamp,
-        );
+        let handle2 =
+            MQTTAckHandle::new(message_id, topic, qos, packet_id, delivery_count, timestamp);
 
         // Each handle should have a unique ID even with same parameters
         assert_ne!(handle1.handle_id(), handle2.handle_id());
@@ -194,8 +184,8 @@ mod mqtt_ack_handle_tests {
 
         // Test various packet ID scenarios
         let packet_id_cases = vec![
-            (QoS::AtMostOnce, None),        // QoS 0 should have no packet ID
-            (QoS::AtLeastOnce, Some(1)),    // QoS 1 minimum packet ID
+            (QoS::AtMostOnce, None),         // QoS 0 should have no packet ID
+            (QoS::AtLeastOnce, Some(1)),     // QoS 1 minimum packet ID
             (QoS::AtLeastOnce, Some(65535)), // QoS 1 maximum packet ID
             (QoS::ExactlyOnce, Some(32768)), // QoS 2 mid-range packet ID
         ];
@@ -257,21 +247,23 @@ mod mqtt_ack_subscriber_tests {
     async fn test_mqtt_ack_subscriber_creation() {
         let broker_url = "127.0.0.1";
         let client_id = Some("test-client".to_string());
-        
+
         // Test subscriber creation (this should not fail even without connection)
         let result = MQTTAckSubscriber::new(broker_url, client_id).await;
-        
+
         // We expect this to fail since we don't have an MQTT broker running
         // but we're testing that the error handling works correctly
         assert!(result.is_err());
-        
+
         // The error should be a connection error, not a panic or other issue
         let error = result.unwrap_err();
-        assert!(error.to_string().contains("connection") || 
-                error.to_string().contains("Connection") ||
-                error.to_string().contains("refused") ||
-                error.to_string().contains("timeout") ||
-                error.to_string().contains("resolve"));
+        assert!(
+            error.to_string().contains("connection")
+                || error.to_string().contains("Connection")
+                || error.to_string().contains("refused")
+                || error.to_string().contains("timeout")
+                || error.to_string().contains("resolve")
+        );
     }
 
     #[tokio::test]
@@ -280,29 +272,37 @@ mod mqtt_ack_subscriber_tests {
             "",
             "invalid-host",
             "256.256.256.256", // Invalid IP
-            "localhost:99999",  // Invalid port
+            "localhost:99999", // Invalid port
         ];
 
         for broker_url in invalid_broker_urls {
             let result = MQTTAckSubscriber::new(broker_url, Some("test-client".to_string())).await;
-            assert!(result.is_err(), "Expected error for broker URL: {}", broker_url);
+            assert!(
+                result.is_err(),
+                "Expected error for broker URL: {}",
+                broker_url
+            );
         }
     }
 
     #[tokio::test]
     async fn test_mqtt_ack_subscriber_client_id_handling() {
         let broker_url = "127.0.0.1";
-        
+
         let client_id_cases = vec![
             Some("valid-client-id".to_string()),
             Some("".to_string()), // Empty client ID (should be auto-generated)
-            None, // No client ID (should be auto-generated)
+            None,                 // No client ID (should be auto-generated)
         ];
 
         for client_id in client_id_cases {
             let result = MQTTAckSubscriber::new(broker_url, client_id.clone()).await;
             // All should fail due to no broker, but shouldn't panic on client ID handling
-            assert!(result.is_err(), "Expected connection error for client ID: {:?}", client_id);
+            assert!(
+                result.is_err(),
+                "Expected connection error for client ID: {:?}",
+                client_id
+            );
         }
     }
 
@@ -355,11 +355,11 @@ mod mqtt_error_handling_tests {
         // Test connection to a non-existent host (should timeout quickly)
         let broker_url = "192.0.2.1"; // RFC5737 test address
         let client_id = Some("timeout-test".to_string());
-        
+
         let start_time = std::time::Instant::now();
         let result = MQTTAckSubscriber::new(broker_url, client_id).await;
         let elapsed = start_time.elapsed();
-        
+
         // Should fail relatively quickly (within 30 seconds)
         assert!(result.is_err());
         assert!(elapsed < Duration::from_secs(30));
@@ -368,13 +368,18 @@ mod mqtt_error_handling_tests {
     #[tokio::test]
     async fn test_mqtt_invalid_configurations() {
         let invalid_configs = vec![
-            ("", Some("client".to_string())), // Empty broker URL
+            ("", Some("client".to_string())),              // Empty broker URL
             ("invalid\0host", Some("client".to_string())), // Null character in host
         ];
 
         for (broker_url, client_id) in invalid_configs {
             let result = MQTTAckSubscriber::new(broker_url, client_id.clone()).await;
-            assert!(result.is_err(), "Expected error for broker: {}, client: {:?}", broker_url, client_id);
+            assert!(
+                result.is_err(),
+                "Expected error for broker: {}, client: {:?}",
+                broker_url,
+                client_id
+            );
         }
     }
 }
@@ -393,28 +398,32 @@ mod mqtt_integration_unit_tests {
             .with_metadata("topic", "sensors/temperature");
 
         // Simulate extracting MQTT-specific information
-        let qos_level: u8 = message.metadata
+        let qos_level: u8 = message
+            .metadata
             .get("qos")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
-        
+
         let qos = match qos_level {
             0 => QoS::AtMostOnce,
             1 => QoS::AtLeastOnce,
             2 => QoS::ExactlyOnce,
             _ => QoS::AtMostOnce,
         };
-        
-        let packet_id: Option<u16> = message.metadata
+
+        let packet_id: Option<u16> = message
+            .metadata
             .get("packet_id")
             .and_then(|s| s.parse().ok());
-        
-        let delivery_count: u32 = message.metadata
+
+        let delivery_count: u32 = message
+            .metadata
             .get("delivery_count")
             .and_then(|s| s.parse().ok())
             .unwrap_or(1);
-        
-        let topic = message.metadata
+
+        let topic = message
+            .metadata
             .get("topic")
             .unwrap_or(&"default".to_string())
             .clone();
@@ -466,11 +475,19 @@ mod mqtt_integration_unit_tests {
             );
 
             assert_eq!(handle.requires_ack(), should_ack);
-            
+
             if should_ack {
-                assert!(packet_id.is_some(), "QoS {} should have packet ID", qos as u8);
+                assert!(
+                    packet_id.is_some(),
+                    "QoS {} should have packet ID",
+                    qos as u8
+                );
             } else {
-                assert!(packet_id.is_none(), "QoS {} should not have packet ID", qos as u8);
+                assert!(
+                    packet_id.is_none(),
+                    "QoS {} should not have packet ID",
+                    qos as u8
+                );
             }
         }
     }
@@ -480,14 +497,20 @@ mod mqtt_integration_unit_tests {
         // Test various MQTT topic patterns
         let topic_patterns = vec![
             "sensors/temperature",
-            "home/+/temperature",      // Single-level wildcard
-            "sensors/#",               // Multi-level wildcard
+            "home/+/temperature", // Single-level wildcard
+            "sensors/#",          // Multi-level wildcard
             "building/floor1/room2/sensor3",
-            "$SYS/broker/uptime",      // System topic
+            "$SYS/broker/uptime", // System topic
         ];
 
         for topic in topic_patterns {
-            let handle = MQTTAckHandle::new("topic-test".to_string(), topic.to_string(), SystemTime::now(), 1, QoS::AtLeastOnce, Some(1),
+            let handle = MQTTAckHandle::new(
+                "topic-test".to_string(),
+                topic.to_string(),
+                SystemTime::now(),
+                1,
+                QoS::AtLeastOnce,
+                Some(1),
             );
 
             assert_eq!(handle.topic(), topic);
@@ -504,10 +527,10 @@ mod mqtt_integration_unit_tests {
         let timestamp = SystemTime::now();
 
         let packet_id_cases = vec![
-            1,      // Minimum valid packet ID
-            100,    // Low range
-            32768,  // Mid range
-            65535,  // Maximum valid packet ID
+            1,     // Minimum valid packet ID
+            100,   // Low range
+            32768, // Mid range
+            65535, // Maximum valid packet ID
         ];
 
         for packet_id in packet_id_cases {
@@ -550,8 +573,13 @@ mod mqtt_integration_unit_tests {
                 SystemTime::now(),
             );
 
-            assert_eq!(handle.is_retry(), expected_retry, 
-                      "Delivery count {} should have retry={}", count, expected_retry);
+            assert_eq!(
+                handle.is_retry(),
+                expected_retry,
+                "Delivery count {} should have retry={}",
+                count,
+                expected_retry
+            );
             assert_eq!(handle.delivery_count(), count);
         }
     }
@@ -571,7 +599,7 @@ mod mqtt_integration_unit_tests {
                 assert!(!id.is_empty() || id.is_empty()); // Allow empty for auto-gen
                 assert!(id.len() < 256); // Reasonable length
             }
-            
+
             // In a real implementation, we would test:
             // - Clean session flag handling
             // - Message persistence across reconnections
@@ -596,7 +624,7 @@ mod mqtt_performance_unit_tests {
                 2 => QoS::ExactlyOnce,
                 _ => QoS::AtMostOnce,
             };
-            
+
             let packet_id = if qos != QoS::AtMostOnce {
                 Some((i % 65535 + 1) as u16)
             } else {
@@ -617,13 +645,22 @@ mod mqtt_performance_unit_tests {
         let per_handle = elapsed / count;
 
         // Handle creation should be very fast (< 1ms per handle)
-        assert!(per_handle < Duration::from_millis(1), 
-               "Handle creation took too long: {:?} per handle", per_handle);
+        assert!(
+            per_handle < Duration::from_millis(1),
+            "Handle creation took too long: {:?} per handle",
+            per_handle
+        );
     }
 
     #[test]
     fn test_handle_method_call_performance() {
-        let handle = MQTTAckHandle::new("perf-test".to_string(), "test/performance".to_string(), SystemTime::now(), 3, QoS::ExactlyOnce, Some(12345),
+        let handle = MQTTAckHandle::new(
+            "perf-test".to_string(),
+            "test/performance".to_string(),
+            SystemTime::now(),
+            3,
+            QoS::ExactlyOnce,
+            Some(12345),
         );
 
         let start = std::time::Instant::now();
@@ -645,30 +682,29 @@ mod mqtt_performance_unit_tests {
         let per_call = elapsed / (iterations * 9); // 9 method calls per iteration
 
         // Method calls should be extremely fast (< 1µs per call)
-        assert!(per_call < Duration::from_micros(1), 
-               "Method calls took too long: {:?} per call", per_call);
+        assert!(
+            per_call < Duration::from_micros(1),
+            "Method calls took too long: {:?} per call",
+            per_call
+        );
     }
 
     #[test]
     fn test_qos_determination_performance() {
-        let qos_levels = vec![
-            QoS::AtMostOnce,
-            QoS::AtLeastOnce,
-            QoS::ExactlyOnce,
-        ];
+        let qos_levels = vec![QoS::AtMostOnce, QoS::AtLeastOnce, QoS::ExactlyOnce];
 
         let start = std::time::Instant::now();
         let iterations = 10000;
 
         for i in 0..iterations {
             let qos = &qos_levels[i % 3];
-            
+
             // Simulate QoS-based logic
             let requires_ack = match qos {
                 QoS::AtMostOnce => false,
                 QoS::AtLeastOnce | QoS::ExactlyOnce => true,
             };
-            
+
             let packet_id = if requires_ack {
                 Some((i % 65535 + 1) as u16)
             } else {
@@ -683,7 +719,10 @@ mod mqtt_performance_unit_tests {
         let per_iteration = elapsed / iterations as u32;
 
         // QoS determination should be extremely fast
-        assert!(per_iteration < Duration::from_nanos(100), 
-               "QoS determination took too long: {:?} per iteration", per_iteration);
+        assert!(
+            per_iteration < Duration::from_nanos(100),
+            "QoS determination took too long: {:?} per iteration",
+            per_iteration
+        );
     }
 }

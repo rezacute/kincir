@@ -73,11 +73,7 @@ mod kafka_ack_handle_tests {
 
         // Multiple retries
         let handle_multiple_retry = KafkaAckHandle::new(
-            message_id,
-            topic,
-            partition,
-            offset,
-            5, // delivery_count = 5
+            message_id, topic, partition, offset, 5, // delivery_count = 5
             timestamp,
         );
         assert!(handle_multiple_retry.is_retry());
@@ -121,10 +117,10 @@ mod kafka_ack_handle_tests {
         let timestamp = SystemTime::now();
 
         let test_cases = vec![
-            (0, 0),      // Partition 0, offset 0
-            (0, 1000),   // Partition 0, high offset
-            (5, 0),      // High partition, offset 0
-            (10, 5000),  // High partition, high offset
+            (0, 0),          // Partition 0, offset 0
+            (0, 1000),       // Partition 0, high offset
+            (5, 0),          // High partition, offset 0
+            (10, 5000),      // High partition, high offset
             (255, u64::MAX), // Edge case: max values
         ];
 
@@ -210,21 +206,23 @@ mod kafka_ack_subscriber_tests {
     async fn test_kafka_ack_subscriber_creation() {
         let brokers = vec!["localhost:9092".to_string()];
         let group_id = "test-group".to_string();
-        
+
         // Test subscriber creation (this should not fail even without connection)
         let result = KafkaAckSubscriber::new(brokers, group_id).await;
-        
+
         // We expect this to fail since we don't have a Kafka broker running
         // but we're testing that the error handling works correctly
         assert!(result.is_err());
-        
+
         // The error should be a connection error, not a panic or other issue
         let error = result.unwrap_err();
-        assert!(error.to_string().contains("connection") || 
-                error.to_string().contains("Connection") ||
-                error.to_string().contains("broker") ||
-                error.to_string().contains("timeout") ||
-                error.to_string().contains("resolve"));
+        assert!(
+            error.to_string().contains("connection")
+                || error.to_string().contains("Connection")
+                || error.to_string().contains("broker")
+                || error.to_string().contains("timeout")
+                || error.to_string().contains("resolve")
+        );
     }
 
     #[tokio::test]
@@ -233,12 +231,20 @@ mod kafka_ack_subscriber_tests {
             (vec![], "empty-group".to_string()), // Empty brokers list
             (vec!["".to_string()], "test-group".to_string()), // Empty broker string
             (vec!["invalid-broker".to_string()], "test-group".to_string()), // Invalid broker format
-            (vec!["localhost:99999".to_string()], "test-group".to_string()), // Invalid port
+            (
+                vec!["localhost:99999".to_string()],
+                "test-group".to_string(),
+            ), // Invalid port
         ];
 
         for (brokers, group_id) in invalid_broker_configs {
             let result = KafkaAckSubscriber::new(brokers.clone(), group_id.clone()).await;
-            assert!(result.is_err(), "Expected error for brokers: {:?}, group: {}", brokers, group_id);
+            assert!(
+                result.is_err(),
+                "Expected error for brokers: {:?}, group: {}",
+                brokers,
+                group_id
+            );
         }
     }
 
@@ -247,7 +253,7 @@ mod kafka_ack_subscriber_tests {
         let brokers = vec!["localhost:9092".to_string()];
         let invalid_group_ids = vec![
             "".to_string(), // Empty group ID
-            // Note: Kafka allows most characters in group IDs, so we mainly test empty
+                            // Note: Kafka allows most characters in group IDs, so we mainly test empty
         ];
 
         for group_id in invalid_group_ids {
@@ -271,7 +277,7 @@ mod kafka_ack_subscriber_tests {
         for broker_string in valid_broker_strings {
             assert!(!broker_string.is_empty());
             assert!(broker_string.contains(':'));
-            
+
             let parts: Vec<&str> = broker_string.split(':').collect();
             assert_eq!(parts.len(), 2);
             assert!(!parts[0].is_empty()); // Host part
@@ -289,11 +295,11 @@ mod kafka_error_handling_tests {
         // Test connection to a non-existent host (should timeout quickly)
         let brokers = vec!["192.0.2.1:9092".to_string()]; // RFC5737 test address
         let group_id = "timeout-test-group".to_string();
-        
+
         let start_time = std::time::Instant::now();
         let result = KafkaAckSubscriber::new(brokers, group_id).await;
         let elapsed = start_time.elapsed();
-        
+
         // Should fail relatively quickly (within 30 seconds)
         assert!(result.is_err());
         assert!(elapsed < Duration::from_secs(30));
@@ -303,15 +309,19 @@ mod kafka_error_handling_tests {
     async fn test_kafka_malformed_broker_addresses() {
         let malformed_brokers = vec![
             vec!["not-a-broker".to_string()],
-            vec!["localhost".to_string()], // Missing port
-            vec![":9092".to_string()], // Missing host
-            vec!["localhost:".to_string()], // Missing port number
+            vec!["localhost".to_string()],     // Missing port
+            vec![":9092".to_string()],         // Missing host
+            vec!["localhost:".to_string()],    // Missing port number
             vec!["localhost:abc".to_string()], // Invalid port
         ];
 
         for brokers in malformed_brokers {
             let result = KafkaAckSubscriber::new(brokers.clone(), "test-group".to_string()).await;
-            assert!(result.is_err(), "Expected error for malformed brokers: {:?}", brokers);
+            assert!(
+                result.is_err(),
+                "Expected error for malformed brokers: {:?}",
+                brokers
+            );
         }
     }
 }
@@ -330,22 +340,26 @@ mod kafka_integration_unit_tests {
             .with_metadata("topic", "test-topic");
 
         // Simulate extracting Kafka-specific information
-        let partition: i32 = message.metadata
+        let partition: i32 = message
+            .metadata
             .get("partition")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
-        
-        let offset: u64 = message.metadata
+
+        let offset: u64 = message
+            .metadata
             .get("offset")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
-        
-        let delivery_count: u32 = message.metadata
+
+        let delivery_count: u32 = message
+            .metadata
             .get("delivery_count")
             .and_then(|s| s.parse().ok())
             .unwrap_or(1);
-        
-        let topic = message.metadata
+
+        let topic = message
+            .metadata
             .get("topic")
             .unwrap_or(&"default".to_string())
             .clone();
@@ -376,11 +390,46 @@ mod kafka_integration_unit_tests {
     fn test_batch_acknowledgment_logic() {
         // Test the logic for batch acknowledgment with Kafka offsets
         let handles = vec![
-            KafkaAckHandle::new("msg1".to_string(), "topic".to_string(), 0, 100, 1, SystemTime::now()),
-            KafkaAckHandle::new("msg2".to_string(), "topic".to_string(), 0, 101, 1, SystemTime::now()),
-            KafkaAckHandle::new("msg3".to_string(), "topic".to_string(), 0, 102, 1, SystemTime::now()),
-            KafkaAckHandle::new("msg4".to_string(), "topic".to_string(), 1, 200, 1, SystemTime::now()),
-            KafkaAckHandle::new("msg5".to_string(), "topic".to_string(), 1, 201, 1, SystemTime::now()),
+            KafkaAckHandle::new(
+                "msg1".to_string(),
+                "topic".to_string(),
+                0,
+                100,
+                1,
+                SystemTime::now(),
+            ),
+            KafkaAckHandle::new(
+                "msg2".to_string(),
+                "topic".to_string(),
+                0,
+                101,
+                1,
+                SystemTime::now(),
+            ),
+            KafkaAckHandle::new(
+                "msg3".to_string(),
+                "topic".to_string(),
+                0,
+                102,
+                1,
+                SystemTime::now(),
+            ),
+            KafkaAckHandle::new(
+                "msg4".to_string(),
+                "topic".to_string(),
+                1,
+                200,
+                1,
+                SystemTime::now(),
+            ),
+            KafkaAckHandle::new(
+                "msg5".to_string(),
+                "topic".to_string(),
+                1,
+                201,
+                1,
+                SystemTime::now(),
+            ),
         ];
 
         // Group by partition and find highest offset per partition
@@ -396,9 +445,8 @@ mod kafka_integration_unit_tests {
         assert_eq!(partition_offsets.get(&1), Some(&201));
 
         // Verify all handles are from the same topic (required for batch commit)
-        let all_same_topic = handles.iter()
-            .all(|h| h.topic() == "topic");
-        
+        let all_same_topic = handles.iter().all(|h| h.topic() == "topic");
+
         assert!(all_same_topic);
     }
 
@@ -446,7 +494,7 @@ mod kafka_integration_unit_tests {
             // Test that group IDs are preserved and valid
             assert!(!group_id.is_empty());
             assert!(!group_id.contains('\0')); // No null characters
-            
+
             // Group IDs should be reasonable length
             assert!(group_id.len() < 256);
         }
@@ -500,8 +548,13 @@ mod kafka_integration_unit_tests {
                 SystemTime::now(),
             );
 
-            assert_eq!(handle.is_retry(), expected_retry, 
-                      "Delivery count {} should have retry={}", count, expected_retry);
+            assert_eq!(
+                handle.is_retry(),
+                expected_retry,
+                "Delivery count {} should have retry={}",
+                count,
+                expected_retry
+            );
             assert_eq!(handle.delivery_count(), count);
         }
     }
@@ -531,8 +584,11 @@ mod kafka_performance_unit_tests {
         let per_handle = elapsed / count;
 
         // Handle creation should be very fast (< 1ms per handle)
-        assert!(per_handle < Duration::from_millis(1), 
-               "Handle creation took too long: {:?} per handle", per_handle);
+        assert!(
+            per_handle < Duration::from_millis(1),
+            "Handle creation took too long: {:?} per handle",
+            per_handle
+        );
     }
 
     #[test]
@@ -564,21 +620,26 @@ mod kafka_performance_unit_tests {
         let per_call = elapsed / (iterations * 8); // 8 method calls per iteration
 
         // Method calls should be extremely fast (< 1µs per call)
-        assert!(per_call < Duration::from_micros(1), 
-               "Method calls took too long: {:?} per call", per_call);
+        assert!(
+            per_call < Duration::from_micros(1),
+            "Method calls took too long: {:?} per call",
+            per_call
+        );
     }
 
     #[test]
     fn test_offset_calculation_performance() {
         let handles: Vec<KafkaAckHandle> = (0..1000)
-            .map(|i| KafkaAckHandle::new(
-                format!("message-{}", i),
-                "test-topic".to_string(),
-                (i % 10) as i32, // 10 partitions
-                i as u64,
-                1,
-                SystemTime::now(),
-            ))
+            .map(|i| {
+                KafkaAckHandle::new(
+                    format!("message-{}", i),
+                    "test-topic".to_string(),
+                    (i % 10) as i32, // 10 partitions
+                    i as u64,
+                    1,
+                    SystemTime::now(),
+                )
+            })
             .collect();
 
         let start = std::time::Instant::now();
@@ -595,9 +656,12 @@ mod kafka_performance_unit_tests {
         let elapsed = start.elapsed();
 
         // Offset calculation should be fast
-        assert!(elapsed < Duration::from_millis(10), 
-               "Offset calculation took too long: {:?}", elapsed);
-        
+        assert!(
+            elapsed < Duration::from_millis(10),
+            "Offset calculation took too long: {:?}",
+            elapsed
+        );
+
         // Verify results
         assert_eq!(partition_offsets.len(), 10); // 10 partitions
         for i in 0..10 {

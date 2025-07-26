@@ -279,17 +279,23 @@ where
     /// Run the acknowledgment-aware router
     pub async fn run(&self) -> Result<(), Box<dyn Error + Send + Sync>> {
         #[cfg(feature = "logging")]
-        self.logger.info("Starting acknowledgment-aware router...").await;
+        self.logger
+            .info("Starting acknowledgment-aware router...")
+            .await;
 
         // Subscribe to the consume topic
         {
             let subscriber = self.subscriber.lock().await;
-            subscriber.subscribe(&self.consume_topic).await
+            subscriber
+                .subscribe(&self.consume_topic)
+                .await
                 .map_err(|e| e.into())?;
         }
 
         #[cfg(feature = "logging")]
-        self.logger.info(&format!("Subscribed to topic: {}", self.consume_topic)).await;
+        self.logger
+            .info(&format!("Subscribed to topic: {}", self.consume_topic))
+            .await;
 
         // Main processing loop
         loop {
@@ -299,8 +305,10 @@ where
                 }
                 Err(e) => {
                     #[cfg(feature = "logging")]
-                    self.logger.error(&format!("Error in message processing loop: {}", e)).await;
-                    
+                    self.logger
+                        .error(&format!("Error in message processing loop: {}", e))
+                        .await;
+
                     // Continue processing despite errors
                     tokio::time::sleep(Duration::from_millis(100)).await;
                 }
@@ -319,12 +327,14 @@ where
         };
 
         #[cfg(feature = "logging")]
-        self.logger.info(&format!(
-            "Received message: id={}, topic={}, delivery_count={}",
-            ack_handle.message_id(),
-            ack_handle.topic(),
-            ack_handle.delivery_count()
-        )).await;
+        self.logger
+            .info(&format!(
+                "Received message: id={}, topic={}, delivery_count={}",
+                ack_handle.message_id(),
+                ack_handle.topic(),
+                ack_handle.delivery_count()
+            ))
+            .await;
 
         // Update statistics
         {
@@ -338,11 +348,13 @@ where
                 Ok(result) => result,
                 Err(_) => {
                     #[cfg(feature = "logging")]
-                    self.logger.error(&format!(
-                        "Message processing timed out after {:?} for message: {}",
-                        timeout_duration,
-                        ack_handle.message_id()
-                    )).await;
+                    self.logger
+                        .error(&format!(
+                            "Message processing timed out after {:?} for message: {}",
+                            timeout_duration,
+                            ack_handle.message_id()
+                        ))
+                        .await;
 
                     // Update timeout statistics
                     {
@@ -350,7 +362,9 @@ where
                         stats.messages_timed_out += 1;
                     }
 
-                    return self.handle_processing_failure(ack_handle, "Processing timeout").await;
+                    return self
+                        .handle_processing_failure(ack_handle, "Processing timeout")
+                        .await;
                 }
             }
         } else {
@@ -367,17 +381,21 @@ where
         // Handle processing result based on strategy
         match processing_result {
             Ok(processed_messages) => {
-                self.handle_processing_success(message, ack_handle, processed_messages).await
+                self.handle_processing_success(message, ack_handle, processed_messages)
+                    .await
             }
             Err(e) => {
                 #[cfg(feature = "logging")]
-                self.logger.error(&format!(
-                    "Message processing failed for message {}: {}",
-                    ack_handle.message_id(),
-                    e
-                )).await;
+                self.logger
+                    .error(&format!(
+                        "Message processing failed for message {}: {}",
+                        ack_handle.message_id(),
+                        e
+                    ))
+                    .await;
 
-                self.handle_processing_failure(ack_handle, &e.to_string()).await
+                self.handle_processing_failure(ack_handle, &e.to_string())
+                    .await
             }
         }
     }
@@ -397,11 +415,12 @@ where
                 .await?;
 
             #[cfg(feature = "logging")]
-            self.logger.info(&format!(
-                "Published {} processed messages to topic: {}",
-                message_count,
-                self.publish_topic
-            )).await;
+            self.logger
+                .info(&format!(
+                    "Published {} processed messages to topic: {}",
+                    message_count, self.publish_topic
+                ))
+                .await;
         }
 
         // Handle acknowledgment based on strategy
@@ -412,10 +431,9 @@ where
                 subscriber.ack(ack_handle).await.map_err(|e| e.into())?;
 
                 #[cfg(feature = "logging")]
-                self.logger.info(&format!(
-                    "Message acknowledged: {}",
-                    message_id
-                )).await;
+                self.logger
+                    .info(&format!("Message acknowledged: {}", message_id))
+                    .await;
 
                 // Update statistics
                 {
@@ -425,17 +443,21 @@ where
             }
             AckStrategy::Manual => {
                 #[cfg(feature = "logging")]
-                self.logger.info(&format!(
-                    "Manual acknowledgment mode - handler should handle ack for message: {}",
-                    ack_handle.message_id()
-                )).await;
+                self.logger
+                    .info(&format!(
+                        "Manual acknowledgment mode - handler should handle ack for message: {}",
+                        ack_handle.message_id()
+                    ))
+                    .await;
             }
             AckStrategy::NeverAck => {
                 #[cfg(feature = "logging")]
-                self.logger.info(&format!(
-                    "Never acknowledge mode - message not acknowledged: {}",
-                    ack_handle.message_id()
-                )).await;
+                self.logger
+                    .info(&format!(
+                        "Never acknowledge mode - message not acknowledged: {}",
+                        ack_handle.message_id()
+                    ))
+                    .await;
             }
         }
 
@@ -455,27 +477,34 @@ where
         if should_retry && self.config.requeue_on_failure {
             // Negative acknowledge with requeue
             let subscriber = self.subscriber.lock().await;
-            subscriber.nack(ack_handle, true).await.map_err(|e| e.into())?;
+            subscriber
+                .nack(ack_handle, true)
+                .await
+                .map_err(|e| e.into())?;
 
             #[cfg(feature = "logging")]
-            self.logger.info(&format!(
-                "Message negatively acknowledged with requeue (attempt {}): {} - {}",
-                delivery_count,
-                message_id,
-                error_message
-            )).await;
+            self.logger
+                .info(&format!(
+                    "Message negatively acknowledged with requeue (attempt {}): {} - {}",
+                    delivery_count, message_id, error_message
+                ))
+                .await;
         } else {
             // Max retries exceeded or no requeue - discard message
             let subscriber = self.subscriber.lock().await;
-            subscriber.nack(ack_handle, false).await.map_err(|e| e.into())?;
+            subscriber
+                .nack(ack_handle, false)
+                .await
+                .map_err(|e| e.into())?;
 
             #[cfg(feature = "logging")]
             if delivery_count > self.config.max_retries {
-                self.logger.error(&format!(
-                    "Max retries exceeded - message discarded: {} (attempts: {})",
-                    message_id,
-                    delivery_count
-                )).await;
+                self.logger
+                    .error(&format!(
+                        "Max retries exceeded - message discarded: {} (attempts: {})",
+                        message_id, delivery_count
+                    ))
+                    .await;
 
                 // Update max retries statistics
                 {
@@ -483,11 +512,12 @@ where
                     stats.messages_max_retries_exceeded += 1;
                 }
             } else {
-                self.logger.info(&format!(
-                    "Message negatively acknowledged without requeue: {} - {}",
-                    message_id,
-                    error_message
-                )).await;
+                self.logger
+                    .info(&format!(
+                        "Message negatively acknowledged without requeue: {} - {}",
+                        message_id, error_message
+                    ))
+                    .await;
             }
         }
 
@@ -512,15 +542,19 @@ where
     /// Run the router with batch acknowledgment processing
     async fn run_batched(&self, batch_size: usize) -> Result<(), Box<dyn Error + Send + Sync>> {
         #[cfg(feature = "logging")]
-        self.logger.info(&format!(
-            "Starting acknowledgment-aware router with batch size: {}",
-            batch_size
-        )).await;
+        self.logger
+            .info(&format!(
+                "Starting acknowledgment-aware router with batch size: {}",
+                batch_size
+            ))
+            .await;
 
         // Subscribe to the consume topic
         {
             let subscriber = self.subscriber.lock().await;
-            subscriber.subscribe(&self.consume_topic).await
+            subscriber
+                .subscribe(&self.consume_topic)
+                .await
                 .map_err(|e| e.into())?;
         }
 
@@ -537,14 +571,17 @@ where
                     }
                     Err(e) => {
                         #[cfg(feature = "logging")]
-                        self.logger.error(&format!("Error receiving message: {}", e)).await;
+                        self.logger
+                            .error(&format!("Error receiving message: {}", e))
+                            .await;
                         break;
                     }
                 }
             }
 
             if !batch_messages.is_empty() {
-                self.process_message_batch(batch_messages, batch_handles).await?;
+                self.process_message_batch(batch_messages, batch_handles)
+                    .await?;
                 batch_messages = Vec::new();
                 batch_handles = Vec::new();
             }
@@ -590,13 +627,17 @@ where
         // Batch acknowledge successful messages
         if !success_handles.is_empty() {
             let subscriber = self.subscriber.lock().await;
-            subscriber.ack_batch(success_handles).await.map_err(|e| e.into())?;
+            subscriber
+                .ack_batch(success_handles)
+                .await
+                .map_err(|e| e.into())?;
         }
 
         // Batch handle failed messages
         if !failed_handles.is_empty() {
             let subscriber = self.subscriber.lock().await;
-            subscriber.nack_batch(failed_handles, self.config.requeue_on_failure)
+            subscriber
+                .nack_batch(failed_handles, self.config.requeue_on_failure)
                 .await
                 .map_err(|e| e.into())?;
         }
@@ -622,7 +663,7 @@ mod tests {
     #[test]
     fn test_ack_stats_calculations() {
         let mut stats = RouterAckStats::default();
-        
+
         // Test initial state
         assert_eq!(stats.ack_rate(), 0.0);
         assert_eq!(stats.nack_rate(), 0.0);

@@ -92,13 +92,8 @@ mod rabbitmq_ack_handle_tests {
             timestamp,
         );
 
-        let handle2 = RabbitMQAckHandle::new(
-            message_id,
-            topic,
-            delivery_tag,
-            delivery_count,
-            timestamp,
-        );
+        let handle2 =
+            RabbitMQAckHandle::new(message_id, topic, delivery_tag, delivery_count, timestamp);
 
         // Each handle should have a unique ID even with same parameters
         assert_ne!(handle1.handle_id(), handle2.handle_id());
@@ -163,20 +158,22 @@ mod rabbitmq_ack_subscriber_tests {
     #[tokio::test]
     async fn test_rabbitmq_ack_subscriber_creation() {
         let connection_string = "amqp://localhost:5672";
-        
+
         // Test subscriber creation (this should not fail even without connection)
         let result = RabbitMQAckSubscriber::new(connection_string).await;
-        
+
         // We expect this to fail since we don't have a RabbitMQ broker running
         // but we're testing that the error handling works correctly
         assert!(result.is_err());
-        
+
         // The error should be a connection error, not a panic or other issue
         let error = result.unwrap_err();
-        assert!(error.to_string().contains("connection") || 
-                error.to_string().contains("Connection") ||
-                error.to_string().contains("refused") ||
-                error.to_string().contains("timeout"));
+        assert!(
+            error.to_string().contains("connection")
+                || error.to_string().contains("Connection")
+                || error.to_string().contains("refused")
+                || error.to_string().contains("timeout")
+        );
     }
 
     #[tokio::test]
@@ -191,7 +188,11 @@ mod rabbitmq_ack_subscriber_tests {
 
         for connection_string in invalid_connection_strings {
             let result = RabbitMQAckSubscriber::new(connection_string).await;
-            assert!(result.is_err(), "Expected error for connection string: {}", connection_string);
+            assert!(
+                result.is_err(),
+                "Expected error for connection string: {}",
+                connection_string
+            );
         }
     }
 
@@ -224,11 +225,11 @@ mod rabbitmq_error_handling_tests {
     async fn test_rabbitmq_connection_timeout() {
         // Test connection to a non-existent host (should timeout quickly)
         let connection_string = "amqp://192.0.2.1:5672"; // RFC5737 test address
-        
+
         let start_time = std::time::Instant::now();
         let result = RabbitMQAckSubscriber::new(connection_string).await;
         let elapsed = start_time.elapsed();
-        
+
         // Should fail relatively quickly (within 30 seconds)
         assert!(result.is_err());
         assert!(elapsed < Duration::from_secs(30));
@@ -239,8 +240,8 @@ mod rabbitmq_error_handling_tests {
         let malformed_urls = vec![
             "not-a-url",
             "http://localhost:5672", // Wrong protocol
-            "amqp://", // Incomplete
-            "amqp:///", // Missing host
+            "amqp://",               // Incomplete
+            "amqp:///",              // Missing host
         ];
 
         for url in malformed_urls {
@@ -263,17 +264,20 @@ mod rabbitmq_integration_unit_tests {
             .with_metadata("queue_name", "test-queue");
 
         // Simulate extracting RabbitMQ-specific information
-        let delivery_tag: u64 = message.metadata
+        let delivery_tag: u64 = message
+            .metadata
             .get("delivery_tag")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
-        
-        let delivery_count: u32 = message.metadata
+
+        let delivery_count: u32 = message
+            .metadata
             .get("delivery_count")
             .and_then(|s| s.parse().ok())
             .unwrap_or(1);
-        
-        let queue_name = message.metadata
+
+        let queue_name = message
+            .metadata
             .get("queue_name")
             .unwrap_or(&"default".to_string())
             .clone();
@@ -283,7 +287,12 @@ mod rabbitmq_integration_unit_tests {
         assert_eq!(queue_name, "test-queue");
 
         // Create handle with extracted information
-        let handle = RabbitMQAckHandle::new(message.uuid.clone(), queue_name, SystemTime::now(, delivery_count, delivery_tag),
+        let handle = RabbitMQAckHandle::new(
+            message.uuid.clone(),
+            queue_name,
+            SystemTime::now(),
+            delivery_count,
+            delivery_tag,
         );
 
         assert_eq!(handle.message_id(), message.uuid);
@@ -296,23 +305,37 @@ mod rabbitmq_integration_unit_tests {
     fn test_batch_acknowledgment_logic() {
         // Test the logic for batch acknowledgment with RabbitMQ delivery tags
         let handles = vec![
-            RabbitMQAckHandle::new("msg1".to_string(), "queue".to_string(), SystemTime::now(), 1, 100),
-            RabbitMQAckHandle::new("msg2".to_string(), "queue".to_string(), SystemTime::now(), 1, 101),
-            RabbitMQAckHandle::new("msg3".to_string(), "queue".to_string(), SystemTime::now(), 1, 102),
+            RabbitMQAckHandle::new(
+                "msg1".to_string(),
+                "queue".to_string(),
+                SystemTime::now(),
+                1,
+                100,
+            ),
+            RabbitMQAckHandle::new(
+                "msg2".to_string(),
+                "queue".to_string(),
+                SystemTime::now(),
+                1,
+                101,
+            ),
+            RabbitMQAckHandle::new(
+                "msg3".to_string(),
+                "queue".to_string(),
+                SystemTime::now(),
+                1,
+                102,
+            ),
         ];
 
         // Find the highest delivery tag for batch acknowledgment
-        let max_delivery_tag = handles.iter()
-            .map(|h| h.delivery_tag())
-            .max()
-            .unwrap_or(0);
+        let max_delivery_tag = handles.iter().map(|h| h.delivery_tag()).max().unwrap_or(0);
 
         assert_eq!(max_delivery_tag, 102);
 
         // Verify all handles are from the same queue (required for batch ack)
-        let all_same_queue = handles.iter()
-            .all(|h| h.topic() == "queue");
-        
+        let all_same_queue = handles.iter().all(|h| h.topic() == "queue");
+
         assert!(all_same_queue);
     }
 
@@ -331,11 +354,21 @@ mod rabbitmq_integration_unit_tests {
         ];
 
         for (count, expected_retry) in deliveries {
-            let handle = RabbitMQAckHandle::new(message_id.clone(), queue.clone(), SystemTime::now(, count, delivery_tag),
+            let handle = RabbitMQAckHandle::new(
+                message_id.clone(),
+                queue.clone(),
+                SystemTime::now(),
+                count,
+                delivery_tag,
             );
 
-            assert_eq!(handle.is_retry(), expected_retry, 
-                      "Delivery count {} should have retry={}", count, expected_retry);
+            assert_eq!(
+                handle.is_retry(),
+                expected_retry,
+                "Delivery count {} should have retry={}",
+                count,
+                expected_retry
+            );
             assert_eq!(handle.delivery_count(), count);
         }
     }
@@ -397,13 +430,21 @@ mod rabbitmq_performance_unit_tests {
         let per_handle = elapsed / count;
 
         // Handle creation should be very fast (< 1ms per handle)
-        assert!(per_handle < Duration::from_millis(1), 
-               "Handle creation took too long: {:?} per handle", per_handle);
+        assert!(
+            per_handle < Duration::from_millis(1),
+            "Handle creation took too long: {:?} per handle",
+            per_handle
+        );
     }
 
     #[test]
     fn test_handle_method_call_performance() {
-        let handle = RabbitMQAckHandle::new("perf-test".to_string(), "test-queue".to_string(), SystemTime::now(), 2, 12345,
+        let handle = RabbitMQAckHandle::new(
+            "perf-test".to_string(),
+            "test-queue".to_string(),
+            SystemTime::now(),
+            2,
+            12345,
         );
 
         let start = std::time::Instant::now();
@@ -423,27 +464,32 @@ mod rabbitmq_performance_unit_tests {
         let per_call = elapsed / (iterations * 7); // 7 method calls per iteration
 
         // Method calls should be extremely fast (< 1µs per call)
-        assert!(per_call < Duration::from_micros(1), 
-               "Method calls took too long: {:?} per call", per_call);
+        assert!(
+            per_call < Duration::from_micros(1),
+            "Method calls took too long: {:?} per call",
+            per_call
+        );
     }
 
     #[test]
     fn test_memory_usage_estimation() {
         // Test memory usage of handles
         let handles: Vec<RabbitMQAckHandle> = (0..100)
-            .map(|i| RabbitMQAckHandle::new(
-                format!("message-{}", i),
-                "test-queue".to_string(),
-                i as u64,
-                1,
-                SystemTime::now(),
-            ))
+            .map(|i| {
+                RabbitMQAckHandle::new(
+                    format!("message-{}", i),
+                    "test-queue".to_string(),
+                    i as u64,
+                    1,
+                    SystemTime::now(),
+                )
+            })
             .collect();
 
         // Each handle should be relatively small in memory
         // This is more of a documentation test than a strict requirement
         assert_eq!(handles.len(), 100);
-        
+
         // Verify all handles are properly created
         for (i, handle) in handles.iter().enumerate() {
             assert_eq!(handle.message_id(), format!("message-{}", i));

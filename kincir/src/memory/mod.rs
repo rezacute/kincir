@@ -56,8 +56,8 @@
 //! ```
 
 mod ack;
-mod ack_tests;
 mod ack_fixed; // Fixed acknowledgment implementation
+mod ack_tests;
 mod advanced_tests;
 mod broker;
 mod config;
@@ -71,7 +71,7 @@ mod working_ack_test;
 // Re-export public types
 pub use ack::{InMemoryAckHandle, InMemoryAckSubscriber};
 pub use ack_fixed::{InMemoryAckHandleFixed, InMemoryAckSubscriberFixed}; // Export fixed types
-pub use broker::{InMemoryBroker, TopicInfo, BrokerHealth};
+pub use broker::{BrokerHealth, InMemoryBroker, TopicInfo};
 pub use config::InMemoryConfig;
 pub use error::InMemoryError;
 pub use publisher::InMemoryPublisher;
