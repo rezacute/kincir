@@ -1,3 +1,9 @@
+---
+layout: docs
+title: RabbitMQ Integration
+description: Enterprise-grade message queuing with RabbitMQ and Kincir
+---
+
 # RabbitMQ Integration Example
 
 RabbitMQ is a robust, enterprise-grade message broker that provides reliable message queuing with advanced routing capabilities. Kincir provides seamless integration with RabbitMQ through its unified interface.

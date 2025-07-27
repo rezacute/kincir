@@ -10,7 +10,7 @@ description: Unified message streaming library for Rust with support for multipl
 
 Kincir is a unified message streaming library for Rust that provides a consistent interface for working with multiple message broker backends.
 
-[Get Started](/docs/) | [View on GitHub](https://github.com/rezacute/kincir) | [Crates.io](https://crates.io/crates/kincir)
+[Get Started](docs/getting-started.html) | [View on GitHub](https://github.com/rezacute/kincir) | [Crates.io](https://crates.io/crates/kincir)
 
 ---
 
@@ -163,14 +163,14 @@ Kincir is evolving towards **feature parity with Watermill (Golang)** while leve
 
 Ready to dive in? Check out our comprehensive documentation:
 
-- **[Getting Started Guide](/docs/getting-started.html)** - Complete setup and basic usage
-- **[Examples](/examples/)** - Comprehensive examples for all backends
+- **[Getting Started Guide](docs/getting-started.html)** - Complete setup and basic usage
+- **[Examples](examples/)** - Comprehensive examples for all backends
 - **[API Documentation](https://docs.rs/kincir)** - Full API reference
 
 ### Quick Links
 
-- **Documentation**: [Getting Started](/docs/getting-started.html)
-- **Examples**: [Comprehensive Examples](/examples/)
+- **Documentation**: [Getting Started](docs/getting-started.html)
+- **Examples**: [Comprehensive Examples](examples/)
 - **GitHub**: [Source Code](https://github.com/rezacute/kincir)
 - **Crates.io**: [Package](https://crates.io/crates/kincir)
 - **Issues**: [GitHub Issues](https://github.com/rezacute/kincir/issues)
@@ -182,7 +182,7 @@ Ready to dive in? Check out our comprehensive documentation:
 
 Check out the documentation to learn how to integrate Kincir into your Rust applications.
 
-[Get Started](/docs/) | [API Reference](/docs/api/) | [Examples](/docs/examples/)
+[Get Started](docs/getting-started.html) | [API Reference](https://docs.rs/kincir) | [Examples](examples/)
 
 ---
 

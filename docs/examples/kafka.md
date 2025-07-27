@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: docs
 title: Kafka Integration Example
 description: High-throughput message streaming with Apache Kafka
 ---

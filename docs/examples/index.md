@@ -10,41 +10,41 @@ This section contains practical examples demonstrating various Kincir features a
 
 ## Basic Examples
 
-### [In-Memory Broker Example](/examples/in-memory.html)
+### [In-Memory Broker Example](in-memory.html)
 Learn how to use the high-performance in-memory broker for testing and lightweight production scenarios.
 
-### [RabbitMQ Integration](/examples/rabbitmq.html)
+### [RabbitMQ Integration](rabbitmq.html)
 Complete guide to integrating with RabbitMQ including message acknowledgments and advanced routing.
 
-### [Kafka Integration](/examples/kafka.html)
+### [Kafka Integration](kafka.html)
 High-throughput message streaming with Apache Kafka, including consumer groups and exactly-once semantics.
 
-### [MQTT Support](/examples/mqtt.html)
+### [MQTT Support](mqtt.html)
 IoT messaging with MQTT, including QoS levels and device communication patterns.
 
 ## Advanced Examples
 
-### [Message Acknowledgments](/examples/acknowledgments.html)
+### [Message Acknowledgments](acknowledgments.html)
 Comprehensive guide to reliable message processing with acknowledgments across all backends.
 
-### [Message Routing](/examples/routing.html)
+### [Message Routing](routing.html)
 Advanced message routing patterns and transformation techniques.
 
-### [Error Handling](/examples/error-handling.html)
+### [Error Handling](error-handling.html)
 Best practices for handling errors and implementing retry strategies.
 
-### [Performance Optimization](/examples/performance.html)
+### [Performance Optimization](performance.html)
 Tips and techniques for optimizing message throughput and latency.
 
-### [Monitoring and Observability](/examples/monitoring.html)
+### [Monitoring and Observability](monitoring.html)
 Setting up monitoring, metrics, and distributed tracing for your message flows.
 
 ## Integration Examples
 
-### [Microservices Communication](/examples/microservices.html)
+### [Microservices Communication](microservices.html)
 Patterns for service-to-service communication in microservices architectures.
 
-### [Unit Testing](/examples/unit-testing.html)
+### [Unit Testing](unit-testing.html)
 Testing strategies and patterns for applications using Kincir.
 
 ---
@@ -53,9 +53,9 @@ Testing strategies and patterns for applications using Kincir.
 
 If you're new to Kincir, we recommend starting with:
 
-1. **[In-Memory Broker Example](/examples/in-memory.html)** - No external dependencies
-2. **[Getting Started Guide](/docs/getting-started.html)** - Complete setup guide
-3. **[Message Acknowledgments](/examples/acknowledgments.html)** - Reliable processing
+1. **[In-Memory Broker Example](in-memory.html)** - No external dependencies
+2. **[Getting Started Guide](../docs/getting-started.html)** - Complete setup guide
+3. **[Message Acknowledgments](acknowledgments.html)** - Reliable processing
 
 ## Need Help?
 

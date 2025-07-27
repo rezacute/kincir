@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Microservices Communication
+description: Using Kincir for inter-service communication in microservices architecture
+---
+
 # Microservices Communication with Kincir
 
 This guide demonstrates how to use Kincir for inter-service communication in a microservices architecture.

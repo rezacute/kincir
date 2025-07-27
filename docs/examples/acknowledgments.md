@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Message Acknowledgments
+description: Reliable message processing with acknowledgment patterns
+---
+
 # Message Acknowledgments Example
 
 Message acknowledgments are crucial for reliable message processing. Kincir v0.2.0 introduces comprehensive acknowledgment support across RabbitMQ, Kafka, and MQTT backends, ensuring messages are processed exactly once and handling failures gracefully.
