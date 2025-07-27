@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: docs
 title: Kincir Examples
 description: Comprehensive examples demonstrating Kincir features and use cases
 ---
