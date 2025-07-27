@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: docs
 title: Kincir - High-Performance Rust Message Streaming
 description: Unified message streaming library for Rust with support for multiple broker backends
 ---
@@ -10,7 +10,11 @@ description: Unified message streaming library for Rust with support for multipl
 
 Kincir is a unified message streaming library for Rust that provides a consistent interface for working with multiple message broker backends.
 
-[Get Started](docs/getting-started.html) | [View on GitHub](https://github.com/rezacute/kincir) | [Crates.io](https://crates.io/crates/kincir)
+<div class="action-buttons">
+  <a href="docs/getting-started.html" class="btn btn-primary">Get Started</a>
+  <a href="https://github.com/rezacute/kincir" class="btn btn-secondary">View on GitHub</a>
+  <a href="https://crates.io/crates/kincir" class="btn btn-secondary">Crates.io</a>
+</div>
 
 ---
 
