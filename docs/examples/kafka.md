@@ -1,3 +1,9 @@
+---
+layout: default
+title: Kafka Integration Example
+description: High-throughput message streaming with Apache Kafka
+---
+
 # Kafka Integration Example
 
 Apache Kafka is a distributed streaming platform designed for high-throughput, fault-tolerant message streaming. Kincir provides seamless integration with Kafka through its unified interface.
@@ -291,8 +297,8 @@ struct Order {
 
 impl Order {
     fn to_json(&self) -> String {
-        format!(r#"{{"id":"{}","amount":{},"customer_id":"{}"}}"#, 
-                self.id, self.amount, self.customer_id)
+        {% raw %}format!(r#"{{"id":"{}","amount":{},"customer_id":"{}"}}"#, 
+                self.id, self.amount, self.customer_id){% endraw %}
     }
 }
 
