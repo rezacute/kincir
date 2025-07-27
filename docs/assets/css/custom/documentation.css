@@ -16,19 +16,86 @@
   text-align: center;
 }
 
-.docs-container-page h2 {
-  margin-top: 3rem;
-  margin-bottom: 1.5rem;
-  color: #2d3748;
-  font-size: 1.8rem;
-  font-weight: 600;
+/* Special styling for root page subtitle */
+.docs-container-page h1 + p strong {
+  font-size: 1.2rem;
+  color: #4a5568;
+  font-weight: 500;
 }
 
+/* Action buttons styling for root page */
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4169E1, #1E3A8A);
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.2);
+  color: white;
+  text-decoration: none;
+}
+
+.btn-secondary {
+  background: white;
+  color: #4a5568;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+}
+
+.btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.1);
+  color: #2d3748;
+  text-decoration: none;
+}
+
+/* Feature sections styling */
 .docs-container-page h3 {
   margin-top: 2.5rem;
   margin-bottom: 1.25rem;
   color: #2d3748;
   font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* Emoji in headings */
+.docs-container-page h3:has-text("🔧"),
+.docs-container-page h3:has-text("⚡"),
+.docs-container-page h3:has-text("🚀"),
+.docs-container-page h3:has-text("🔒") {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.docs-container-page h2 {
+  margin-top: 3rem;
+  margin-bottom: 1.5rem;
+  color: #2d3748;
+  font-size: 1.8rem;
   font-weight: 600;
 }
 
@@ -148,6 +215,15 @@
   color: #2c5282;
   border-bottom: 1px solid #2c5282;
   text-decoration: none;
+}
+
+/* Don't apply link styling to buttons */
+.docs-container-page .btn {
+  border-bottom: none !important;
+}
+
+.docs-container-page .btn:hover {
+  border-bottom: none !important;
 }
 
 /* Paragraph spacing */
@@ -318,5 +394,16 @@
     padding: 1rem;
     padding-right: 3rem;
     font-size: 13px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .btn {
+    width: 100%;
+    max-width: 200px;
+    text-align: center;
   }
 }
