@@ -2,7 +2,7 @@
 
 /* Fix margins and layout for documentation pages */
 .docs-container-page {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 2rem 1rem;
 }
@@ -19,15 +19,17 @@
 .docs-container-page h2 {
   margin-top: 3rem;
   margin-bottom: 1.5rem;
-  color: #4a5568;
+  color: #2d3748;
   font-size: 1.8rem;
+  font-weight: 600;
 }
 
 .docs-container-page h3 {
   margin-top: 2.5rem;
   margin-bottom: 1.25rem;
-  color: #4a5568;
+  color: #2d3748;
   font-size: 1.5rem;
+  font-weight: 600;
 }
 
 /* Fix code blocks in documentation pages */
@@ -35,7 +37,7 @@
   margin: 2rem 0;
   padding: 1.5rem;
   padding-right: 3.5rem; /* Space for copy button */
-  background-color: #f8fafc !important;
+  background-color: #f8fafc;
   border-radius: 8px;
   overflow-x: auto;
   position: relative;
@@ -122,15 +124,15 @@
 /* Fix highlighted syntax for documentation */
 .docs-container-page .highlight {
   margin: 0;
-  background: transparent !important;
+  background: transparent;
 }
 
 .docs-container-page .highlight pre.highlight {
-  background: #f8fafc !important;
-  border: none !important;
-  padding: 1.5rem !important;
-  padding-right: 3.5rem !important;
-  margin: 0 !important;
+  background: #f8fafc;
+  border: none;
+  padding: 1.5rem;
+  padding-right: 3.5rem;
+  margin: 0;
 }
 
 /* Fix links in documentation */
@@ -220,7 +222,7 @@
   background-color: rgba(240, 255, 244, 0.9);
 }
 
-/* Simplified syntax highlighting - minimal colors */
+/* Simplified syntax highlighting - GitHub-like colors */
 .docs-container-page .language-rust .k,
 .docs-container-page .language-rust .kw,
 .docs-container-page .language-rust .kd,

@@ -3,32 +3,26 @@
  * This file contains styles that are ONLY for the examples page
  */
 
-/* Basic container styles - centered content */
+/* Basic container styles - centered content with reasonable max-width */
 .examples-container,
 .docs-container-page {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 2rem 1rem;
-  text-align: left; /* Content left-aligned within centered container */
 }
 
-/* Center the main content wrapper */
-.site-content {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-
-/* Heading styles for both container and direct elements */
+/* Heading styles - only center the main title */
 .examples-container h1,
 .docs-container-page h1 {
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
   font-size: 2.5rem;
   font-weight: 700;
   text-align: center;
+  color: #2d3748;
 }
 
-.examples-container .intro-text,
+/* Center only the first paragraph (intro text) */
+.examples-container > p:first-of-type,
 .docs-container-page > p:first-of-type {
   margin-bottom: 2rem;
   font-size: 1.1rem;
@@ -36,189 +30,199 @@
   text-align: center;
 }
 
+/* Keep other headings left-aligned */
 .examples-container h2,
 .docs-container-page h2 {
-  margin: 2rem 0 1rem;
+  margin: 2.5rem 0 1rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #edf2f7;
   font-size: 1.8rem;
   font-weight: 600;
+  color: #2d3748;
 }
 
 .examples-container h3,
 .docs-container-page h3 {
-  margin-top: 1.5rem;
+  margin-top: 2rem;
   margin-bottom: 1rem;
   font-size: 1.5rem;
   font-weight: 600;
   color: #2d3748;
 }
 
-/* Example sections - support both old and new structure */
-.example-section,
-.docs-container-page > section {
-  margin-bottom: 3rem;
-}
-
-.example-item,
-.docs-container-page > h3 {
-  margin-bottom: 1.5rem;
-}
-
-.example-content p,
+/* Regular paragraphs - left aligned */
+.examples-container p,
 .docs-container-page p {
   margin-bottom: 1rem;
   color: #4a5568;
   line-height: 1.6;
 }
 
-/* Code highlight styles - simplified */
-.highlight-wrapper {
-  position: relative !important;
-  margin: 1.5rem 0 !important;
-  background-color: #f8fafc !important;
-  border-radius: 8px !important;
-  border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
-  overflow: visible !important;
+/* Code highlight styles - clean and simple */
+.highlight-wrapper,
+.docs-container-page pre {
+  position: relative;
+  margin: 1.5rem 0;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow: visible;
 }
 
-/* Simplified language indicators */
+/* Language indicators - subtle */
 .highlight-wrapper[data-language]::before {
   content: attr(data-language);
-  position: absolute !important;
-  top: 0.75rem !important;
-  right: 3.5rem !important;
-  background-color: #e2e8f0 !important;
-  color: #4a5568 !important;
-  font-size: 0.75rem !important;
-  font-weight: 500 !important;
-  letter-spacing: 0.025em !important;
-  text-transform: uppercase !important;
-  padding: 0.25rem 0.5rem !important;
-  border-radius: 4px !important;
-  z-index: 90 !important;
+  position: absolute;
+  top: 0.75rem;
+  right: 3.5rem;
+  background-color: #e2e8f0;
+  color: #4a5568;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  z-index: 90;
 }
 
 .highlight {
-  margin: 0 !important;
-  background: transparent !important;
+  margin: 0;
+  background: transparent;
 }
 
 pre {
-  margin: 0 !important;
-  padding: 1.5rem !important;
-  padding-right: 3.5rem !important; /* Space for copy button */
-  background-color: transparent !important;
-  border: none !important;
-  overflow-x: auto !important;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', 'Courier New', monospace !important;
-  font-size: 14px !important;
-  line-height: 1.5 !important;
-  color: #2d3748 !important;
+  margin: 0;
+  padding: 1.5rem;
+  padding-right: 3.5rem; /* Space for copy button */
+  background-color: transparent;
+  border: none;
+  overflow-x: auto;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #2d3748;
 }
 
 code {
-  background: transparent !important;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', 'Courier New', monospace !important;
-  color: inherit !important;
+  background: transparent;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', 'Courier New', monospace;
+  color: inherit;
 }
 
-/* Copy button with icon - simplified design */
+/* Copy button with icon - clean design */
 .manual-copy-btn {
-  position: absolute !important;
-  top: 0.75rem !important;
-  right: 0.75rem !important;
-  background: rgba(255, 255, 255, 0.9) !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-  border-radius: 6px !important;
-  padding: 0.5rem !important;
-  cursor: pointer !important;
-  color: #4a5568 !important;
-  opacity: 0.8 !important;
-  transition: all 0.2s ease !important;
-  z-index: 100 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 32px !important;
-  height: 32px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-  backdrop-filter: blur(4px) !important;
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  padding: 0.5rem;
+  cursor: pointer;
+  color: #4a5568;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(4px);
 }
 
 .manual-copy-btn svg {
-  display: block !important;
-  width: 16px !important;
-  height: 16px !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  stroke: currentColor !important;
-  fill: none !important;
-  stroke-width: 2 !important;
+  display: block;
+  width: 16px;
+  height: 16px;
+  visibility: visible;
+  opacity: 1;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
 }
 
 .manual-copy-btn:hover {
-  background-color: rgba(255, 255, 255, 1) !important;
-  opacity: 1 !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
-  color: #2d3748 !important;
+  background-color: rgba(255, 255, 255, 1);
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  color: #2d3748;
 }
 
 .manual-copy-btn.copied {
-  color: #38a169 !important;
-  border-color: rgba(56, 161, 105, 0.3) !important;
-  background-color: rgba(240, 255, 244, 0.9) !important;
+  color: #38a169;
+  border-color: rgba(56, 161, 105, 0.3);
+  background-color: rgba(240, 255, 244, 0.9);
 }
 
-/* Simplified syntax highlighting - minimal colors */
+/* Simplified syntax highlighting - GitHub-like colors */
 .highlight .k,
 .highlight .kd,
 .highlight .kw {
-  color: #d73a49 !important; /* Keywords in red */
-  font-weight: 500 !important;
+  color: #d73a49; /* Keywords in red */
+  font-weight: 500;
 }
 
 .highlight .nf,
 .highlight .fn {
-  color: #6f42c1 !important; /* Functions in purple */
+  color: #6f42c1; /* Functions in purple */
 }
 
 .highlight .s,
 .highlight .s1,
 .highlight .s2 {
-  color: #032f62 !important; /* Strings in dark blue */
+  color: #032f62; /* Strings in dark blue */
 }
 
 .highlight .c,
 .highlight .c1,
 .highlight .cm {
-  color: #6a737d !important; /* Comments in gray */
-  font-style: italic !important;
+  color: #6a737d; /* Comments in gray */
+  font-style: italic;
 }
 
 .highlight .mi,
 .highlight .mf {
-  color: #005cc5 !important; /* Numbers in blue */
+  color: #005cc5; /* Numbers in blue */
 }
 
 .highlight .na {
-  color: #e36209 !important; /* Attributes in orange */
+  color: #e36209; /* Attributes in orange */
 }
 
-/* Remove complex Rust-specific highlighting */
+/* Default text color for other elements */
 .highlight .nx,
 .highlight .o,
 .highlight .p {
-  color: #24292e !important; /* Default text color */
+  color: #24292e;
 }
 
-/* Make sure the code blocks fit the page properly */
-.docs-container-page .highlight-wrapper {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
+/* Lists styling */
+.docs-container-page ul,
+.docs-container-page ol {
+  margin: 1.5rem 0;
+  padding-left: 2rem;
+}
+
+.docs-container-page li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+/* Links styling */
+.docs-container-page a {
+  color: #3182ce;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.docs-container-page a:hover {
+  color: #2c5282;
+  text-decoration: underline;
 }
 
 /* Responsive adjustments */
@@ -235,9 +239,9 @@ code {
   }
   
   pre {
-    padding: 1rem !important;
-    padding-right: 3rem !important;
-    font-size: 13px !important;
+    padding: 1rem;
+    padding-right: 3rem;
+    font-size: 13px;
   }
 }
 
