@@ -1,3 +1,9 @@
+---
+layout: default
+title: Message Routing Example
+description: Advanced message routing and transformation patterns
+---
+
 # Message Routing Example
 
 Message routing is a powerful feature in Kincir that allows you to process and transform messages as they flow through your system. The Router component provides a flexible way to handle message processing with customizable handlers.
@@ -118,7 +124,7 @@ impl MessageHandler for MultiOutputHandler {
         // Extract metrics
         if let Some(event_type) = message.get_metadata("event_type") {
             let metric_msg = Message::new(
-                format!(r#"{{"metric":"event_count","type":"{}","value":1}}"#, event_type).into_bytes()
+                {% raw %}format!(r#"{{"metric":"event_count","type":"{}","value":1}}"#, event_type).into_bytes(){% endraw %}
             ).with_metadata("destination", "metrics")
              .with_metadata("metric_type", "counter");
             outputs.push(metric_msg);
