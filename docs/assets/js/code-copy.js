@@ -2,6 +2,21 @@
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM loaded, initializing code copy functionality');
   
+  // Copy icon SVG
+  const copyIconSVG = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+  `;
+  
+  // Check icon SVG
+  const checkIconSVG = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20,6 9,17 4,12"></polyline>
+    </svg>
+  `;
+  
   // Ensure copy buttons are added to all highlight-wrapper elements
   const highlightWrappers = document.querySelectorAll('.highlight-wrapper');
   console.log('Found highlight wrappers:', highlightWrappers.length);
@@ -17,10 +32,45 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Create button element
     const copyButton = document.createElement('button');
-    copyButton.className = 'copy-button manual-copy-btn';
+    copyButton.className = 'manual-copy-btn';
     copyButton.setAttribute('aria-label', 'Copy code to clipboard');
-    copyButton.setAttribute('onclick', 'copyCode(this)');
-    copyButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+    copyButton.innerHTML = copyIconSVG;
+    copyButton.title = 'Copy to clipboard';
+    
+    // Add click event
+    copyButton.addEventListener('click', function() {
+      const codeElement = wrapper.querySelector('pre code') || wrapper.querySelector('pre');
+      const code = codeElement ? codeElement.textContent : '';
+      
+      navigator.clipboard.writeText(code).then(function() {
+        console.log('Code copied to clipboard');
+        
+        // Visual feedback
+        copyButton.innerHTML = checkIconSVG;
+        copyButton.classList.add('copied');
+        copyButton.title = 'Copied!';
+        
+        // Reset after 2 seconds
+        setTimeout(function() {
+          copyButton.innerHTML = copyIconSVG;
+          copyButton.classList.remove('copied');
+          copyButton.title = 'Copy to clipboard';
+        }, 2000);
+      }).catch(function(err) {
+        console.error('Failed to copy: ', err);
+        
+        // Show error state
+        copyButton.style.color = '#e53e3e';
+        copyButton.title = 'Copy failed';
+        
+        // Reset after 2 seconds
+        setTimeout(function() {
+          copyButton.innerHTML = copyIconSVG;
+          copyButton.style.color = '';
+          copyButton.title = 'Copy to clipboard';
+        }, 2000);
+      });
+    });
     
     // Add button to wrapper
     wrapper.appendChild(copyButton);
@@ -38,10 +88,10 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('Removed duplicate copy buttons from highlight-wrapper');
     }
     
-    // ENHANCED: More thoroughly remove any "LANGUAGE-XXXX" text that appears in code blocks
+    // Clean up any language indicators that might appear in code content
     const codeElement = wrapper.querySelector('pre');
     if (codeElement) {
-      // First approach: Remove if the first line contains LANGUAGE-
+      // Remove language indicators that might have been inserted into code content
       if (codeElement.textContent && codeElement.textContent.trim().startsWith('LANGUAGE-')) {
         let text = codeElement.textContent;
         const lines = text.split('\n');
@@ -49,65 +99,120 @@ document.addEventListener('DOMContentLoaded', function() {
         if (lines[0].includes('LANGUAGE-')) {
           lines.shift();
           codeElement.textContent = lines.join('\n');
-          console.log('Removed language indicator line from code block (method 1)');
         }
       }
       
-      // Second approach: Walk the DOM and remove any text node containing LANGUAGE-
-      const walkNodes = function(node) {
-        // If this is a text node, check its content
-        if (node.nodeType === Node.TEXT_NODE) {
-          if (node.textContent.includes('LANGUAGE-')) {
-            // Replace the text node with an empty text node
-            node.textContent = node.textContent.replace(/LANGUAGE-[A-Za-z0-9]+/g, '');
-            console.log('Removed language indicator from text node (method 2)');
-          }
-        } 
-        // If this is an element node, recurse into children
-        else if (node.nodeType === Node.ELEMENT_NODE) {
-          // If we come across a specific element with LANGUAGE- class attributes, handle it
-          if (node.className && node.className.includes && node.className.includes('LANGUAGE-')) {
-            node.style.display = 'none';
-            console.log('Hid element with LANGUAGE class (method 2)');
-          }
-          
-          // Recurse into child nodes
-          for (let i = 0; i < node.childNodes.length; i++) {
-            walkNodes(node.childNodes[i]);
-          }
-        }
-      };
+      // Also clean up any stray language indicators
+      const textNodes = [];
+      const walker = document.createTreeWalker(
+        codeElement,
+        NodeFilter.SHOW_TEXT,
+        null,
+        false
+      );
       
-      // Start walking the DOM from the code element
-      walkNodes(codeElement);
+      let node;
+      while (node = walker.nextNode()) {
+        if (node.textContent.includes('LANGUAGE-')) {
+          textNodes.push(node);
+        }
+      }
+      
+      textNodes.forEach(function(textNode) {
+        textNode.textContent = textNode.textContent.replace(/LANGUAGE-[A-Z]+\s*/g, '');
+      });
     }
+  });
+  
+  // Also handle regular pre elements that might not be in highlight-wrapper
+  const preElements = document.querySelectorAll('pre:not(.highlight-wrapper pre)');
+  preElements.forEach(function(pre) {
+    // Skip if already has a copy button or is inside a highlight-wrapper
+    if (pre.querySelector('.copy-button') || pre.querySelector('.manual-copy-btn') || pre.closest('.highlight-wrapper')) {
+      return;
+    }
+    
+    // Create button element
+    const copyButton = document.createElement('button');
+    copyButton.className = 'manual-copy-btn';
+    copyButton.setAttribute('aria-label', 'Copy code to clipboard');
+    copyButton.innerHTML = copyIconSVG;
+    copyButton.title = 'Copy to clipboard';
+    
+    // Add click event
+    copyButton.addEventListener('click', function() {
+      const code = pre.textContent;
+      
+      navigator.clipboard.writeText(code).then(function() {
+        console.log('Code copied to clipboard');
+        
+        // Visual feedback
+        copyButton.innerHTML = checkIconSVG;
+        copyButton.classList.add('copied');
+        copyButton.title = 'Copied!';
+        
+        // Reset after 2 seconds
+        setTimeout(function() {
+          copyButton.innerHTML = copyIconSVG;
+          copyButton.classList.remove('copied');
+          copyButton.title = 'Copy to clipboard';
+        }, 2000);
+      }).catch(function(err) {
+        console.error('Failed to copy: ', err);
+        
+        // Show error state
+        copyButton.style.color = '#e53e3e';
+        copyButton.title = 'Copy failed';
+        
+        // Reset after 2 seconds
+        setTimeout(function() {
+          copyButton.innerHTML = copyIconSVG;
+          copyButton.style.color = '';
+          copyButton.title = 'Copy to clipboard';
+        }, 2000);
+      });
+    });
+    
+    // Add button to pre element
+    pre.style.position = 'relative';
+    pre.appendChild(copyButton);
   });
 });
 
-// Function for copy button - works for both highlight-wrappers with and without buttons
+// Legacy function for backwards compatibility
 function copyCode(button) {
-  // Find the nearest code block
-  const wrapper = button.closest('.highlight-wrapper');
-  if (!wrapper) return;
+  const wrapper = button.closest('.highlight-wrapper') || button.closest('pre');
+  const codeElement = wrapper.querySelector('code') || wrapper;
+  const code = codeElement.textContent;
   
-  const codeBlock = wrapper.querySelector('.highlight');
-  if (!codeBlock) return;
-  
-  // Get the text content from the highlight block
-  const code = codeBlock.innerText;
-  
-  // Copy the text to the clipboard
   navigator.clipboard.writeText(code).then(function() {
+    console.log('Code copied to clipboard (legacy)');
+    
     // Visual feedback
+    const checkIconSVG = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20,6 9,17 4,12"></polyline>
+      </svg>
+    `;
+    
+    const copyIconSVG = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+    `;
+    
+    button.innerHTML = checkIconSVG;
     button.classList.add('copied');
-    button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    button.title = 'Copied!';
     
     // Reset after 2 seconds
     setTimeout(function() {
+      button.innerHTML = copyIconSVG;
       button.classList.remove('copied');
-      button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+      button.title = 'Copy to clipboard';
     }, 2000);
   }).catch(function(err) {
-    console.error('Could not copy text: ', err);
+    console.error('Failed to copy (legacy): ', err);
   });
-} 
+}
