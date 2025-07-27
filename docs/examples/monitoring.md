@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Monitoring and Observability
+description: Adding comprehensive monitoring, metrics, and distributed tracing to Kincir applications
+---
+
 # Monitoring and Observability with Kincir
 
 This guide demonstrates how to add comprehensive monitoring, metrics, and distributed tracing to Kincir applications.

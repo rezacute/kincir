@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Error Handling
+description: Comprehensive error handling strategies for production Kincir applications
+---
+
 # Error Handling in Kincir
 
 This guide demonstrates comprehensive error handling strategies for production Kincir applications, including retry mechanisms, dead letter queues, and graceful degradation patterns.

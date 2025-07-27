@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Performance Optimization
+description: Techniques and best practices for optimizing Kincir performance in high-load scenarios
+---
+
 # Performance Optimization in Kincir
 
 This guide covers techniques and best practices for optimizing Kincir performance in high-load production scenarios.

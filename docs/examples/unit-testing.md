@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Unit Testing
+description: Best practices for unit testing Kincir-based applications
+---
+
 # Unit Testing with Kincir
 
 This guide demonstrates best practices for unit testing Kincir-based applications, including mocking, test fixtures, and integration testing strategies.

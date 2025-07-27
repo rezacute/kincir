@@ -1,3 +1,9 @@
+---
+layout: docs
+title: MQTT Integration
+description: IoT messaging with MQTT and Quality of Service handling
+---
+
 # MQTT Integration Example
 
 MQTT (Message Queuing Telemetry Transport) is a lightweight messaging protocol designed for IoT devices and low-bandwidth, high-latency networks. Kincir provides full MQTT support with Quality of Service (QoS) handling.

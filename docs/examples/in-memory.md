@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: docs
 title: In-Memory Broker Example
 description: Zero-dependency, high-performance message broker for testing and development
 ---

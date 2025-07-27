@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: docs
 title: Message Routing Example
 description: Advanced message routing and transformation patterns
 ---
