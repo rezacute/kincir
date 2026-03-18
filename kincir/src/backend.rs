@@ -2,6 +2,26 @@
 //!
 //! This module provides a unified interface for creating and managing
 //! different message broker backends through a common API.
+//!
+//! # Quick Start
+//!
+//! ```
+//! use kincir::backend::{Backend, BackendBuilder};
+//!
+//! // Create a RabbitMQ backend
+//! # async fn example() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+//! let backend = BackendBuilder::create_rabbitmq("amqp://localhost:5672").await?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! # Supported Backends
+//!
+//! | Scheme | Backend |
+//! |--------|---------|
+//! | `amqp://` | RabbitMQ |
+//! | `rabbitmq://` | RabbitMQ |
+//! | `mqtt://` | MQTT |
 
 use crate::mqtt::{MQTTPublisher, MQTTSubscriber, QoS};
 use crate::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber, RabbitMQError};
