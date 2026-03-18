@@ -252,6 +252,32 @@ let publisher = MQTTPublisher::new("mqtt://localhost:1883", "client-pub");
 let subscriber = MQTTSubscriber::new("mqtt://localhost:1883", "client-sub");
 ```
 
+### Unified Backend API (NEW in v0.2.1)
+
+The unified Backend API provides a simple way to create backends from connection strings:
+
+```rust
+use kincir::backend::{Backend, BackendBuilder, BackendType};
+
+// Create a RabbitMQ backend
+let backend = BackendBuilder::from_connection_string("amqp://localhost:5672", "my-queue").await?;
+
+// Or use the direct builder methods
+let rabbitmq = BackendBuilder::create_rabbitmq("amqp://localhost:5672").await?;
+let mqtt = BackendBuilder::create_mqtt("localhost:1883", "my-topic")?;
+
+// Unified API - works the same regardless of backend
+backend.subscribe("orders").await?;
+backend.publish("orders", vec![Message::new(b"Hello".to_vec())]).await?;
+let msg = backend.receive().await?;
+```
+
+Supported schemes:
+- `amqp://` or `rabbitmq://` → RabbitMQ
+- `mqtt://` → MQTT
+
+See [`kincir::backend`](https://docs.rs/kincir/latest/kincir/backend/) for full documentation.
+
 ## Performance
 
 Kincir v0.2.0 delivers exceptional performance:

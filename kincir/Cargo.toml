@@ -29,6 +29,7 @@ bincode = "1.3"
 prost = { version = "0.12", optional = true }
 
 rumqttc = { version = "0.24.0" }
+url = "2.5"
 
 
 [dev-dependencies]

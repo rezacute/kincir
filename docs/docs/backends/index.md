@@ -178,6 +178,53 @@ send_message(&in_memory_publisher, "topic", b"data").await?;
 // send_message(&kafka_publisher, "topic", b"data").await?;
 ```
 
+## Unified Backend API (NEW)
+
+The new unified Backend API provides a simple way to create backends from connection strings:
+
+```rust
+use kincir::backend::{Backend, BackendBuilder, BackendType};
+
+// Create from connection string
+let backend = BackendBuilder::from_connection_string(
+    "amqp://localhost:5672", 
+    "my-queue"
+).await?;
+
+// Or use direct builder methods
+let rabbitmq = BackendBuilder::create_rabbitmq("amqp://localhost:5672").await?;
+let mqtt = BackendBuilder::create_mqtt("localhost:1883", "my-topic")?;
+
+// Unified interface - same API for all backends
+backend.subscribe("orders").await?;
+backend.publish("orders", vec![Message::new(b"Hello".to_vec())]).await?;
+let msg = backend.receive().await?;
+```
+
+### Supported Schemes
+
+| Scheme | Backend |
+|--------|---------|
+| `amqp://` | RabbitMQ |
+| `rabbitmq://` | RabbitMQ |
+| `mqtt://` | MQTT |
+
+### BackendType
+
+You can also parse connection strings to detect the backend type:
+
+```rust
+use kincir::backend::BackendType;
+
+let backend_type = BackendType::from_scheme("amqp");
+// Returns Some(BackendType::RabbitMQ)
+
+let backend_type = BackendType::from_scheme("mqtt");
+// Returns Some(BackendType::MQTT)
+```
+
+See the [API documentation](https://docs.rs/kincir/latest/kincir/backend/) for full details.
+
 ## Migration Between Backends
 
 Switching between backends typically requires only configuration changes:

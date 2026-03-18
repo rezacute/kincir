@@ -158,6 +158,7 @@ pub trait Subscriber {
 }
 
 pub mod ack;
+pub mod backend;
 pub mod kafka;
 pub mod memory;
 pub mod mqtt;
@@ -190,3 +191,6 @@ pub use protobuf::{MessageCodec, ProtobufCodec};
 pub use router::HandlerFunc;
 pub use router::Router;
 pub use router::{AckRouter, AckStrategy, RouterAckConfig, RouterAckStats};
+
+// Re-export backend types
+pub use backend::{Backend, BackendBuilder, BackendType};
