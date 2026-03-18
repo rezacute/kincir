@@ -161,6 +161,7 @@ pub mod ack;
 pub mod backend;
 pub mod kafka;
 pub mod memory;
+pub mod middleware;
 pub mod mqtt;
 pub mod rabbitmq;
 pub mod router;
@@ -194,3 +195,6 @@ pub use router::{AckRouter, AckStrategy, RouterAckConfig, RouterAckStats};
 
 // Re-export backend types
 pub use backend::{Backend, BackendBuilder, BackendType};
+
+// Re-export middleware types
+pub use middleware::{CorrelationMiddleware, LoggingMiddleware, Middleware, MiddlewareChain, MiddlewareContext, RetryMiddleware};
