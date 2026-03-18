@@ -12,7 +12,7 @@ use tokio::sync::Mutex;
 use thiserror::Error;
 
 /// Represents the type of backend to create
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BackendType {
     /// RabbitMQ broker
     RabbitMQ,
@@ -190,3 +190,6 @@ impl BackendBuilder {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
