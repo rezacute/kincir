@@ -17,6 +17,7 @@ Kincir is a high-performance Rust library that provides a unified interface for 
 - **Message routing** with customizable handlers
 - **Advanced message features** - Message ordering, TTL (Time-To-Live), health monitoring
 - **Thread-safe operations** - Concurrent publishers and subscribers with deadlock resolution
+- **Middleware framework** - Logging, retry, correlation ID middleware
 - **Built-in logging support** (optional via feature flag)
 - **Message UUID generation** for tracking and identification
 - **Customizable message metadata** support
@@ -278,6 +279,34 @@ Supported schemes:
 
 See [`kincir::backend`](https://docs.rs/kincir/latest/kincir/backend/) for full documentation.
 
+### Middleware Framework (NEW in v0.3)
+
+Kincir v0.3 introduces a middleware framework for intercepting message operations:
+
+```rust
+use kincir::middleware::{Middleware, MiddlewareChain, LoggingMiddleware, CorrelationMiddleware};
+
+// Create middleware chain
+let chain = MiddlewareChain::new()
+    .add(LoggingMiddleware::new("MyApp"))
+    .add(CorrelationMiddleware::new())
+    .add(RetryMiddleware::new(3));
+
+// Use with message operations
+let ctx = MiddlewareContext::new("orders");
+let mut messages = vec![Message::new(b"Order #1".to_vec())];
+
+chain.before_publish(&ctx, &mut messages).await;
+// Messages now have correlation IDs added
+```
+
+Available middleware:
+- [`LoggingMiddleware`](https://docs.rs/kincir/latest/kincir/middleware/struct.LoggingMiddleware.html) - Logs all message operations
+- [`CorrelationMiddleware`](https://docs.rs/kincir/latest/kincir/middleware/struct.CorrelationMiddleware.html) - Adds correlation IDs for distributed tracing
+- [`RetryMiddleware`](https://docs.rs/kincir/latest/kincir/middleware/struct.RetryMiddleware.html) - Configures retry behavior
+
+See [`kincir::middleware`](https://docs.rs/kincir/latest/kincir/middleware/) for full documentation.
+
 ## Performance
 
 Kincir v0.2.0 delivers exceptional performance:
@@ -310,7 +339,7 @@ Kincir is evolving towards feature parity with Watermill (Golang):
 - Unit & integration tests for stability
 
 ### 🔄 v0.3 – Middleware & Backend Expansion
-- Middleware framework: logging, retry, recovery, correlation
+- ✅ Middleware framework: logging, retry, correlation
 - Additional broker support (e.g., NATS, AWS SQS)
 - Optimized async pipeline for lower latency
 - Integration tests for middleware + new backends
