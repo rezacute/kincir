@@ -124,6 +124,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+### NATS Support (Beta)
+
+```rust
+use kincir::nats::{NatsPublisher, NatsSubscriber};
+use kincir::{Publisher, Subscriber, Message};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let publisher = NatsPublisher::new("nats://localhost:4222").await?;
+    let mut subscriber = NatsSubscriber::new("nats://localhost:4222").await?;
+
+    publisher.publish("orders", vec![Message::new(b"Order #1".to_vec())]).await?;
+    subscriber.subscribe("orders").await?;
+    let message = subscriber.receive().await?;
+    
+    Ok(())
+}
+```
+
+Enable NATS support with the `nats` feature:
+```toml
+kincir = { version = "0.2.0", features = ["nats"] }
+```
+
 ## Build and Development
 
 ### Using Make
@@ -340,7 +364,7 @@ Kincir is evolving towards feature parity with Watermill (Golang):
 
 ### 🔄 v0.3 – Middleware & Backend Expansion
 - ✅ Middleware framework: logging, retry, correlation
-- Additional broker support (e.g., NATS, AWS SQS)
+- ✅ Additional broker support (NATS)
 - Optimized async pipeline for lower latency
 - Integration tests for middleware + new backends
 
