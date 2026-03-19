@@ -68,6 +68,28 @@ RabbitMQ backend for reliable message queuing with advanced routing.
 ### NATS
 {: .d-inline-block }
 
+Beta
+{: .label .label-purple }
+
+NATS backend for lightweight, cloud-native messaging.
+
+**Key Features:**
+- Lightweight and fast
+- Cloud-native design
+- Subject-based messaging
+- Sub-millisecond latency
+
+[View NATS Documentation]({{ '/docs/backends/nats/' | relative_url }}){: .btn .btn-purple .fs-5 .mb-4 .mb-md-0 .mr-2 }
+
+**Key Features:**
+- Reliable message delivery
+- Flexible routing and exchanges
+- Message acknowledgments
+- Dead letter queues
+
+### NATS
+{: .d-inline-block }
+
 Planned
 {: .label .label-blue }
 

@@ -27,10 +27,9 @@ futures = "0.3"
 uuid = { version = "1.7", features = ["v4"] }
 bincode = "1.3"
 prost = { version = "0.12", optional = true }
-
 rumqttc = { version = "0.24.0" }
 url = "2.5"
-
+async-nats = "0.45.0"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
@@ -38,7 +37,7 @@ bincode = "1.3"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 tokio-amqp = "2.0" # Also in [dependencies]
 futures = "0.3"    # Also in [dependencies]
-futures-util = { version = "0.3" } # Removed features = ["stream"]
+futures-util = { version = "0.3" }
 tokio-test = "0.4"
 proptest = "1.0"
 tempfile = "3.0"

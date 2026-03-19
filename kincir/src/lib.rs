@@ -163,6 +163,7 @@ pub mod kafka;
 pub mod memory;
 pub mod middleware;
 pub mod mqtt;
+pub mod nats;
 pub mod rabbitmq;
 pub mod router;
 pub mod tunnel;
@@ -198,3 +199,6 @@ pub use backend::{Backend, BackendBuilder, BackendType};
 
 // Re-export middleware types
 pub use middleware::{CorrelationMiddleware, LoggingMiddleware, Middleware, MiddlewareChain, MiddlewareContext, RetryMiddleware};
+
+// Re-export NATS types
+pub use nats::{NatsError, NatsPublisher, NatsSubscriber};
