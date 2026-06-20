@@ -133,6 +133,7 @@ impl Backend for RabbitMQBackend {
 pub struct MQTTBackend {
     publisher: Arc<MQTTPublisher>,
     subscriber: Arc<Mutex<MQTTSubscriber>>,
+    #[allow(dead_code)] // retained for future per-backend topic routing
     topic: String,
 }
 

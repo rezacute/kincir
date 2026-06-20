@@ -5,7 +5,6 @@
 use crate::{Message, Publisher, Subscriber};
 use async_nats::Client;
 use async_trait::async_trait;
-use std::sync::Arc;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -57,6 +56,7 @@ impl Publisher for NatsPublisher {
 
 /// NATS Subscriber
 pub struct NatsSubscriber {
+    #[allow(dead_code)] // retained to keep the NATS connection alive for the subscriber's lifetime
     client: Client,
 }
 

@@ -83,7 +83,7 @@ pub struct InMemoryAckSubscriber {
 
 struct SubscriberState {
     /// Message receiver channel
-    receiver: Option<tokio::sync::mpsc::UnboundedReceiver<(Message, InMemoryAckHandle)>>,
+    receiver: Option<tokio::sync::mpsc::UnboundedReceiver<Message>>,
     /// Currently subscribed topic
     subscribed_topic: Option<String>,
 }
@@ -133,12 +133,18 @@ impl AckSubscriber for InMemoryAckSubscriber {
             return Err(InMemoryError::invalid_topic_name(topic));
         }
 
-        // Create acknowledgment-aware receiver
-        let receiver = self.broker.subscribe_with_ack(topic)?;
+        // Subscribe through the broker's standard delivery channel. The
+        // acknowledgment handle is constructed per-message in `receive_with_ack`,
+        // where we have access to the broker `Arc` needed for the weak reference.
+        let receiver = self.broker.subscribe(topic)?;
 
         let mut state = self.state.lock().await;
         state.receiver = Some(receiver);
         state.subscribed_topic = Some(topic.to_string());
+
+        if let Some(stats) = self.broker.stats() {
+            stats.increment_subscribers_connected();
+        }
 
         Ok(())
     }
@@ -149,18 +155,30 @@ impl AckSubscriber for InMemoryAckSubscriber {
         }
 
         // Take the receiver out temporarily to avoid holding the lock during await
-        let mut receiver = {
+        let (mut receiver, topic) = {
             let mut state = self.state.lock().await;
-            state.receiver.take()
+            (state.receiver.take(), state.subscribed_topic.clone())
         };
 
         if let Some(ref mut rx) = receiver {
             let result = match rx.recv().await {
-                Some((message, handle)) => {
+                Some(message) => {
                     // Update statistics
                     if let Some(stats) = self.broker.stats() {
                         stats.increment_messages_consumed(1);
                     }
+
+                    // Construct an acknowledgment handle bound to this broker. The
+                    // in-memory broker does not track redelivery, so the delivery
+                    // count is always 1.
+                    let handle = InMemoryAckHandle::new(
+                        message.uuid.clone(),
+                        topic.clone().unwrap_or_default(),
+                        SystemTime::now(),
+                        1,
+                        Arc::downgrade(&self.broker),
+                    );
+
                     Ok((message, handle))
                 }
                 None => {
@@ -237,7 +255,6 @@ impl Drop for InMemoryAckSubscriber {
 mod tests {
     use super::*;
     use crate::memory::{InMemoryBroker, InMemoryConfig};
-    use std::time::Duration;
 
     #[tokio::test]
     async fn test_ack_handle_creation() {

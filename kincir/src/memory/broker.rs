@@ -130,6 +130,7 @@ impl TopicData {
         Ok(())
     }
 
+    #[allow(dead_code)] // utility for subscriber cleanup; kept for future use
     fn remove_subscriber(&mut self, sender_id: &mpsc::UnboundedSender<Message>) {
         self.subscribers.retain(|s| !std::ptr::eq(s, sender_id));
         self.last_activity = Instant::now();
@@ -571,6 +572,7 @@ impl InMemoryBroker {
     }
 
     /// Estimate memory usage (rough calculation)
+    #[allow(dead_code)] // diagnostic helper; kept for future stats reporting
     fn estimate_memory_usage(&self) -> usize {
         let topics = self.topics.read().unwrap();
         self.estimate_memory_usage_with_lock(&topics)

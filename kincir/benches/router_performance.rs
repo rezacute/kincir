@@ -1,6 +1,16 @@
+//! Benchmarks for the message routing pipeline.
+//!
+//! NOTE: `kincir::router::Router` is generic over backends whose associated
+//! `Error` type is `Box<dyn Error + Send + Sync>`, which the in-memory backend
+//! (whose error type is `InMemoryError`) does not satisfy. To benchmark the
+//! routing work against the dependency-free in-memory broker, these benchmarks
+//! drive the equivalent pipeline directly: subscribe -> publish -> receive ->
+//! run the handler -> publish to the output topic -> receive from the output
+//! topic. This mirrors exactly what `Router::run` does per message.
+
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use kincir::memory::{InMemoryBroker, InMemoryPublisher, InMemorySubscriber};
-use kincir::router::{HandlerFunc, Router};
+use kincir::router::HandlerFunc;
 use kincir::{Message, Publisher, Subscriber};
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -50,6 +60,50 @@ fn create_transform_handler() -> HandlerFunc {
     })
 }
 
+/// Drive `count` messages through the routing pipeline and return the messages
+/// received on the output topic.
+async fn route_messages(
+    broker: Arc<InMemoryBroker>,
+    handler: &HandlerFunc,
+    input_topic: &str,
+    output_topic: &str,
+    messages: Vec<Message>,
+) -> Vec<Message> {
+    let input_publisher = InMemoryPublisher::new(broker.clone());
+    let output_publisher = InMemoryPublisher::new(broker.clone());
+    let mut input_subscriber = InMemorySubscriber::new(broker.clone());
+    let mut output_subscriber = InMemorySubscriber::new(broker.clone());
+
+    // Subscribers must be registered before publishing so they receive the broadcast.
+    input_subscriber.subscribe(input_topic).await.unwrap();
+    output_subscriber.subscribe(output_topic).await.unwrap();
+
+    let count = messages.len();
+    input_publisher
+        .publish(input_topic, messages)
+        .await
+        .unwrap();
+
+    // Route each message: receive -> handler -> publish processed output.
+    for _ in 0..count {
+        let msg = input_subscriber.receive().await.unwrap();
+        let processed = (handler)(msg).await.unwrap();
+        if !processed.is_empty() {
+            output_publisher
+                .publish(output_topic, processed)
+                .await
+                .unwrap();
+        }
+    }
+
+    // Drain the output topic.
+    let mut received = Vec::with_capacity(count);
+    for _ in 0..count {
+        received.push(output_subscriber.receive().await.unwrap());
+    }
+    received
+}
+
 fn bench_router_passthrough(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let mut group = c.benchmark_group("router_passthrough");
@@ -60,52 +114,21 @@ fn bench_router_passthrough(c: &mut Criterion) {
             BenchmarkId::from_parameter(format!("{}msg", message_count)),
             message_count,
             |b, &count| {
-                b.to_async(&rt).iter(|| async {
-                    let broker = Arc::new(InMemoryBroker::with_default_config());
-                    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-                    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-                    let subscriber = Arc::new(InMemorySubscriber::new(broker.clone()));
-                    let mut output_subscriber = InMemorySubscriber::new(broker.clone());
-
-                    #[cfg(feature = "logging")]
-                    let router = {
-                        use kincir::logging::StdLogger;
-                        let logger = Arc::new(StdLogger::new(false, false));
-                        Router::new(
-                            logger,
-                            "input".to_string(),
-                            "output".to_string(),
-                            subscriber,
-                            output_publisher,
-                            create_passthrough_handler(),
+                let handler = create_passthrough_handler();
+                b.to_async(&rt).iter(|| {
+                    let handler = handler.clone();
+                    async move {
+                        let broker = Arc::new(InMemoryBroker::with_default_config());
+                        let messages = create_router_messages(count, 128);
+                        let received = route_messages(
+                            broker,
+                            &handler,
+                            "input",
+                            "output",
+                            black_box(messages),
                         )
-                    };
-
-                    #[cfg(not(feature = "logging"))]
-                    let router = Router::new(
-                        "input".to_string(),
-                        "output".to_string(),
-                        subscriber,
-                        output_publisher,
-                        create_passthrough_handler(),
-                    );
-
-                    output_subscriber.subscribe("output").await.unwrap();
-
-                    let messages = create_router_messages(count, 128);
-                    input_publisher
-                        .publish("input", black_box(messages))
-                        .await
-                        .unwrap();
-
-                    // Process messages through router
-                    for _ in 0..count {
-                        router.process_single_message().await.unwrap();
-                    }
-
-                    // Verify output
-                    for _ in 0..count {
-                        let _ = black_box(output_subscriber.receive().await.unwrap());
+                        .await;
+                        black_box(received);
                     }
                 });
             },
@@ -124,54 +147,25 @@ fn bench_router_processing(c: &mut Criterion) {
             BenchmarkId::from_parameter(format!("{}msg", message_count)),
             message_count,
             |b, &count| {
-                b.to_async(&rt).iter(|| async {
-                    let broker = Arc::new(InMemoryBroker::with_default_config());
-                    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-                    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-                    let subscriber = Arc::new(InMemorySubscriber::new(broker.clone()));
-                    let mut output_subscriber = InMemorySubscriber::new(broker.clone());
-
-                    #[cfg(feature = "logging")]
-                    let router = {
-                        use kincir::logging::StdLogger;
-                        let logger = Arc::new(StdLogger::new(false, false));
-                        Router::new(
-                            logger,
-                            "input".to_string(),
-                            "output".to_string(),
-                            subscriber,
-                            output_publisher,
-                            create_processing_handler(),
+                let handler = create_processing_handler();
+                b.to_async(&rt).iter(|| {
+                    let handler = handler.clone();
+                    async move {
+                        let broker = Arc::new(InMemoryBroker::with_default_config());
+                        let messages = create_router_messages(count, 256);
+                        let received = route_messages(
+                            broker,
+                            &handler,
+                            "input",
+                            "output",
+                            black_box(messages),
                         )
-                    };
+                        .await;
 
-                    #[cfg(not(feature = "logging"))]
-                    let router = Router::new(
-                        "input".to_string(),
-                        "output".to_string(),
-                        subscriber,
-                        output_publisher,
-                        create_processing_handler(),
-                    );
-
-                    output_subscriber.subscribe("output").await.unwrap();
-
-                    let messages = create_router_messages(count, 256);
-                    input_publisher
-                        .publish("input", black_box(messages))
-                        .await
-                        .unwrap();
-
-                    // Process messages through router
-                    for _ in 0..count {
-                        router.process_single_message().await.unwrap();
-                    }
-
-                    // Verify output
-                    for _ in 0..count {
-                        let msg = output_subscriber.receive().await.unwrap();
-                        assert_eq!(msg.metadata.get("processed"), Some(&"true".to_string()));
-                        black_box(msg);
+                        for msg in &received {
+                            assert_eq!(msg.metadata.get("processed"), Some(&"true".to_string()));
+                        }
+                        black_box(received);
                     }
                 });
             },
@@ -190,54 +184,25 @@ fn bench_router_transformation(c: &mut Criterion) {
             BenchmarkId::from_parameter(format!("{}bytes", message_size)),
             message_size,
             |b, &size| {
-                b.to_async(&rt).iter(|| async {
-                    let broker = Arc::new(InMemoryBroker::with_default_config());
-                    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-                    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-                    let subscriber = Arc::new(InMemorySubscriber::new(broker.clone()));
-                    let mut output_subscriber = InMemorySubscriber::new(broker.clone());
-
-                    #[cfg(feature = "logging")]
-                    let router = {
-                        use kincir::logging::StdLogger;
-                        let logger = Arc::new(StdLogger::new(false, false));
-                        Router::new(
-                            logger,
-                            "input".to_string(),
-                            "output".to_string(),
-                            subscriber,
-                            output_publisher,
-                            create_transform_handler(),
+                let handler = create_transform_handler();
+                b.to_async(&rt).iter(|| {
+                    let handler = handler.clone();
+                    async move {
+                        let broker = Arc::new(InMemoryBroker::with_default_config());
+                        let messages = create_router_messages(100, size);
+                        let received = route_messages(
+                            broker,
+                            &handler,
+                            "input",
+                            "output",
+                            black_box(messages),
                         )
-                    };
+                        .await;
 
-                    #[cfg(not(feature = "logging"))]
-                    let router = Router::new(
-                        "input".to_string(),
-                        "output".to_string(),
-                        subscriber,
-                        output_publisher,
-                        create_transform_handler(),
-                    );
-
-                    output_subscriber.subscribe("output").await.unwrap();
-
-                    let messages = create_router_messages(100, size);
-                    input_publisher
-                        .publish("input", black_box(messages))
-                        .await
-                        .unwrap();
-
-                    // Process messages through router
-                    for _ in 0..100 {
-                        router.process_single_message().await.unwrap();
-                    }
-
-                    // Verify output
-                    for _ in 0..100 {
-                        let msg = output_subscriber.receive().await.unwrap();
-                        assert!(String::from_utf8_lossy(&msg.payload).contains("[TRANSFORMED]"));
-                        black_box(msg);
+                        for msg in &received {
+                            assert!(String::from_utf8_lossy(&msg.payload).contains("[TRANSFORMED]"));
+                        }
+                        black_box(received);
                     }
                 });
             },
@@ -259,7 +224,7 @@ fn bench_router_concurrent_processing(c: &mut Criterion) {
             BenchmarkId::from_parameter(format!("{}routers", router_count)),
             router_count,
             |b, &count| {
-                b.to_async(&rt).iter(|| async {
+                b.to_async(&rt).iter(|| async move {
                     let broker = Arc::new(InMemoryBroker::with_default_config());
 
                     let mut handles = Vec::new();
@@ -268,61 +233,24 @@ fn bench_router_concurrent_processing(c: &mut Criterion) {
                         let handle = tokio::spawn(async move {
                             let input_topic = format!("input_{}", router_id);
                             let output_topic = format!("output_{}", router_id);
-
-                            let input_publisher =
-                                Arc::new(InMemoryPublisher::new(broker_clone.clone()));
-                            let output_publisher =
-                                Arc::new(InMemoryPublisher::new(broker_clone.clone()));
-                            let subscriber =
-                                Arc::new(InMemorySubscriber::new(broker_clone.clone()));
-                            let mut output_subscriber = InMemorySubscriber::new(broker_clone);
-
-                            #[cfg(feature = "logging")]
-                            let router = {
-                                use kincir::logging::StdLogger;
-                                let logger = Arc::new(StdLogger::new(false, false));
-                                Router::new(
-                                    logger,
-                                    input_topic.clone(),
-                                    output_topic.clone(),
-                                    subscriber,
-                                    output_publisher,
-                                    create_processing_handler(),
-                                )
-                            };
-
-                            #[cfg(not(feature = "logging"))]
-                            let router = Router::new(
-                                input_topic.clone(),
-                                output_topic.clone(),
-                                subscriber,
-                                output_publisher,
-                                create_processing_handler(),
-                            );
-
-                            output_subscriber.subscribe(&output_topic).await.unwrap();
+                            let handler = create_processing_handler();
 
                             let messages = create_router_messages(messages_per_router, 128);
-                            input_publisher
-                                .publish(&input_topic, messages)
-                                .await
-                                .unwrap();
-
-                            // Process messages
-                            for _ in 0..messages_per_router {
-                                router.process_single_message().await.unwrap();
-                            }
-
-                            // Verify output
-                            for _ in 0..messages_per_router {
-                                output_subscriber.receive().await.unwrap();
-                            }
+                            route_messages(
+                                broker_clone,
+                                &handler,
+                                &input_topic,
+                                &output_topic,
+                                messages,
+                            )
+                            .await
                         });
                         handles.push(handle);
                     }
 
                     for handle in handles {
-                        handle.await.unwrap();
+                        let received = handle.await.unwrap();
+                        black_box(received);
                     }
                 });
             },
@@ -337,46 +265,22 @@ fn bench_router_latency(c: &mut Criterion) {
     group.sample_size(500);
 
     group.bench_function("single_message_latency", |b| {
-        b.to_async(&rt).iter(|| async {
-            let broker = Arc::new(InMemoryBroker::with_default_config());
-            let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-            let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-            let subscriber = Arc::new(InMemorySubscriber::new(broker.clone()));
-            let mut output_subscriber = InMemorySubscriber::new(broker.clone());
-
-            #[cfg(feature = "logging")]
-            let router = {
-                use kincir::logging::StdLogger;
-                let logger = Arc::new(StdLogger::new(false, false));
-                Router::new(
-                    logger,
-                    "input".to_string(),
-                    "output".to_string(),
-                    subscriber,
-                    output_publisher,
-                    create_passthrough_handler(),
+        let handler = create_passthrough_handler();
+        b.to_async(&rt).iter(|| {
+            let handler = handler.clone();
+            async move {
+                let broker = Arc::new(InMemoryBroker::with_default_config());
+                let message = Message::new(b"latency_test".to_vec());
+                let received = route_messages(
+                    broker,
+                    &handler,
+                    "input",
+                    "output",
+                    vec![black_box(message)],
                 )
-            };
-
-            #[cfg(not(feature = "logging"))]
-            let router = Router::new(
-                "input".to_string(),
-                "output".to_string(),
-                subscriber,
-                output_publisher,
-                create_passthrough_handler(),
-            );
-
-            output_subscriber.subscribe("output").await.unwrap();
-
-            let message = Message::new(b"latency_test".to_vec());
-            input_publisher
-                .publish("input", vec![black_box(message)])
-                .await
-                .unwrap();
-
-            router.process_single_message().await.unwrap();
-            let _ = black_box(output_subscriber.receive().await.unwrap());
+                .await;
+                black_box(received);
+            }
         });
     });
 

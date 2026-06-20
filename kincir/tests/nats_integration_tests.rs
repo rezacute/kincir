@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use kincir::nats::{NatsError, NatsPublisher, NatsSubscriber};
+    use kincir::nats::NatsError;
     use kincir::Message;
 
     #[test]

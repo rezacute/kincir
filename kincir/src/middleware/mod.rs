@@ -19,7 +19,6 @@
 use crate::Message;
 use async_trait::async_trait;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 /// Context passed to middleware methods
 #[derive(Debug, Clone)]
@@ -78,6 +77,7 @@ impl MiddlewareChain {
         }
     }
 
+    #[allow(clippy::should_implement_trait)] // `add` is an idiomatic builder method here, not arithmetic
     pub fn add<M: Middleware + 'static>(mut self, middleware: M) -> Self {
         self.middlewares.push(Arc::new(middleware));
         self
@@ -129,17 +129,21 @@ impl Default for MiddlewareChain {
 #[cfg(feature = "logging")]
 mod logging_middleware {
     use super::*;
-    use tracing::{debug, error, info, warn};
+    use tracing::{debug, info};
 
     /// Middleware that logs all message operations
     #[derive(Debug, Clone)]
     pub struct LoggingMiddleware {
+        name: String,
         include_payload: bool,
     }
 
     impl LoggingMiddleware {
-        pub fn new() -> Self {
+        /// Create a new logging middleware with a label used to identify its
+        /// output in the logs.
+        pub fn new(name: impl Into<String>) -> Self {
             Self {
+                name: name.into(),
                 include_payload: false,
             }
         }
@@ -148,11 +152,16 @@ mod logging_middleware {
             self.include_payload = true;
             self
         }
+
+        /// Get the configured label for this middleware.
+        pub fn name(&self) -> &str {
+            &self.name
+        }
     }
 
     impl Default for LoggingMiddleware {
         fn default() -> Self {
-            Self::new()
+            Self::new("kincir")
         }
     }
 
@@ -160,6 +169,7 @@ mod logging_middleware {
     impl Middleware for LoggingMiddleware {
         async fn before_publish(&self, context: &MiddlewareContext, messages: &mut [Message]) {
             info!(
+                middleware = %self.name,
                 topic = %context.topic,
                 count = messages.len(),
                 "Publishing messages"
@@ -173,6 +183,7 @@ mod logging_middleware {
 
         async fn after_publish(&self, context: &MiddlewareContext, messages: &[Message]) {
             info!(
+                middleware = %self.name,
                 topic = %context.topic,
                 count = messages.len(),
                 "Published messages successfully"
@@ -180,19 +191,20 @@ mod logging_middleware {
         }
 
         async fn before_subscribe(&self, context: &MiddlewareContext) {
-            info!(topic = %context.topic, "Subscribing to topic");
+            info!(middleware = %self.name, topic = %context.topic, "Subscribing to topic");
         }
 
         async fn after_subscribe(&self, context: &MiddlewareContext) {
-            info!(topic = %context.topic, "Subscribed successfully");
+            info!(middleware = %self.name, topic = %context.topic, "Subscribed successfully");
         }
 
         async fn before_receive(&self, context: &MiddlewareContext) {
-            debug!(topic = %context.topic, "Waiting for message");
+            debug!(middleware = %self.name, topic = %context.topic, "Waiting for message");
         }
 
         async fn after_receive(&self, context: &MiddlewareContext, message: &Message) {
             info!(
+                middleware = %self.name,
                 topic = %context.topic,
                 uuid = %message.uuid,
                 "Received message"
@@ -204,34 +216,62 @@ mod logging_middleware {
 #[cfg(feature = "logging")]
 pub use logging_middleware::LoggingMiddleware;
 
-/// Middleware that retries failed operations
+/// Configuration for [`RetryMiddleware`].
 #[derive(Debug, Clone)]
-pub struct RetryMiddleware {
-    max_retries: u32,
-    retry_delay_ms: u64,
+pub struct RetryConfig {
+    /// Maximum number of retry attempts.
+    pub max_retries: u32,
+    /// Delay between retry attempts, in milliseconds.
+    pub retry_delay_ms: u64,
 }
 
-impl RetryMiddleware {
+impl RetryConfig {
+    /// Create a new retry configuration with the default delay (100ms).
     pub fn new(max_retries: u32) -> Self {
         Self {
             max_retries,
             retry_delay_ms: 100,
         }
     }
+}
+
+impl Default for RetryConfig {
+    fn default() -> Self {
+        Self::new(3)
+    }
+}
+
+/// Middleware that retries failed operations
+#[derive(Debug, Clone)]
+pub struct RetryMiddleware {
+    config: RetryConfig,
+}
+
+impl RetryMiddleware {
+    pub fn new(max_retries: u32) -> Self {
+        Self {
+            config: RetryConfig::new(max_retries),
+        }
+    }
 
     pub fn with_delay(mut self, delay_ms: u64) -> Self {
-        self.retry_delay_ms = delay_ms;
+        self.config.retry_delay_ms = delay_ms;
         self
+    }
+
+    /// Get the retry configuration.
+    pub fn config(&self) -> &RetryConfig {
+        &self.config
     }
 
     /// Get the max retries count
     pub fn max_retries(&self) -> u32 {
-        self.max_retries
+        self.config.max_retries
     }
 
     /// Get the retry delay in milliseconds
     pub fn retry_delay_ms(&self) -> u64 {
-        self.retry_delay_ms
+        self.config.retry_delay_ms
     }
 }
 
@@ -239,6 +279,13 @@ impl Default for RetryMiddleware {
     fn default() -> Self {
         Self::new(3)
     }
+}
+
+#[async_trait]
+impl Middleware for RetryMiddleware {
+    // The retry policy is exposed via `config()` for callers (e.g. routers) that
+    // implement the retry loop. The middleware hooks themselves are no-ops so the
+    // middleware can participate in a `MiddlewareChain` without altering messages.
 }
 
 /// Middleware that adds correlation IDs to messages
@@ -309,7 +356,7 @@ mod tests {
 
     #[test]
     fn test_correlation_middleware() {
-        let mw = CorrelationMiddleware::new();
+        let _mw = CorrelationMiddleware::new();
         let corr_id = CorrelationMiddleware::generate_correlation_id();
         assert!(!corr_id.is_empty());
     }
@@ -317,6 +364,7 @@ mod tests {
     #[test]
     fn test_retry_middleware() {
         let mw = RetryMiddleware::new(3);
-        assert_eq!(mw.max_retries, 3);
+        assert_eq!(mw.max_retries(), 3);
+        assert_eq!(mw.config().max_retries, 3);
     }
 }

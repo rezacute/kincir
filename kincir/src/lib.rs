@@ -198,7 +198,7 @@ pub use router::{AckRouter, AckStrategy, RouterAckConfig, RouterAckStats};
 pub use backend::{Backend, BackendBuilder, BackendType};
 
 // Re-export middleware types
-pub use middleware::{CorrelationMiddleware, LoggingMiddleware, Middleware, MiddlewareChain, MiddlewareContext, RetryMiddleware};
+pub use middleware::{CorrelationMiddleware, LoggingMiddleware, Middleware, MiddlewareChain, MiddlewareContext, RetryConfig, RetryMiddleware};
 
 // Re-export NATS types
 pub use nats::{NatsError, NatsPublisher, NatsSubscriber};
