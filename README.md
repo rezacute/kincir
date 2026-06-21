@@ -58,20 +58,27 @@ let message = subscriber.receive().await?;
 Kincir v0.2.0 introduces comprehensive message acknowledgment support across all backends:
 
 ```rust
-use kincir::rabbitmq::RabbitMQAckSubscriber;
-use kincir::{AckSubscriber, Message};
+use kincir::ack::AckSubscriber;
+use kincir::memory::{InMemoryAckSubscriber, InMemoryBroker, InMemoryPublisher};
+use kincir::{Message, Publisher};
+use std::sync::Arc;
 
-let mut subscriber = RabbitMQAckSubscriber::new("amqp://localhost:5672", "my-queue");
+let broker = Arc::new(InMemoryBroker::with_default_config());
+let publisher = InMemoryPublisher::new(broker.clone());
+let mut subscriber = InMemoryAckSubscriber::new(broker.clone());
+
 subscriber.subscribe("orders").await?;
+publisher.publish("orders", vec![Message::new(b"Order #1234".to_vec())]).await?;
 
+// Receive a message together with an acknowledgment handle
 let (message, ack_handle) = subscriber.receive_with_ack().await?;
-// Process the message
 println!("Processing: {:?}", message);
 
-// Acknowledge successful processing
-ack_handle.ack().await?;
-// Or reject and requeue on error
-// ack_handle.nack(true).await?;
+// Acknowledge successful processing. The same `AckSubscriber` trait is
+// implemented by the RabbitMQ, Kafka, and MQTT backends.
+subscriber.ack(ack_handle).await?;
+// Or negatively acknowledge and requeue on error:
+// subscriber.nack(ack_handle, true).await?;
 ```
 
 ### MQTT Support
@@ -79,15 +86,19 @@ ack_handle.ack().await?;
 Full MQTT implementation with QoS handling for IoT and real-time applications:
 
 ```rust
-use kincir::mqtt::{MQTTPublisher, MQTTSubscriber};
-use rumqttc::QoS;
+use kincir::mqtt::{MQTTPublisher, MQTTSubscriber, QoS};
+use kincir::{Message, Publisher, Subscriber};
 
-let publisher = MQTTPublisher::new("mqtt://localhost:1883", "client-pub");
-let mut subscriber = MQTTSubscriber::new("mqtt://localhost:1883", "client-sub");
+// Publisher and subscriber are bound to a broker URL and topic; QoS is set on
+// the subscriber. Both constructors return a `Result`.
+let publisher = MQTTPublisher::new("mqtt://localhost:1883", "sensors/temperature")?;
+let mut subscriber =
+    MQTTSubscriber::new("mqtt://localhost:1883", "sensors/temperature", QoS::AtLeastOnce)?;
 
 subscriber.subscribe("sensors/temperature").await?;
-publisher.publish_with_qos("sensors/temperature", 
-    vec![Message::new(b"25.5".to_vec())], QoS::AtLeastOnce).await?;
+publisher
+    .publish("sensors/temperature", vec![Message::new(b"25.5".to_vec())])
+    .await?;
 ```
 
 ### MQTT to RabbitMQ Tunnel
@@ -133,9 +144,9 @@ let message = message.with_metadata("content-type", "text/plain");
 The Router is a central component that handles message flow between publishers and subscribers:
 
 ```rust
+use kincir::logging::StdLogger;
 use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
-use kincir::router::{Router, Logger, StdLogger};
-use kincir::Message;
+use kincir::{HandlerFunc, Message, Router};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -143,16 +154,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Initialize logger
     let logger = Arc::new(StdLogger::new(true, true));
 
-    // Configure message brokers
-    let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672"));
-    let subscriber = Arc::new(RabbitMQSubscriber::new("amqp://localhost:5672", "my-queue"));
+    // Configure message brokers (constructors are async and return a Result)
+    let publisher = Arc::new(RabbitMQPublisher::new("amqp://localhost:5672").await?);
+    // The Router needs the subscriber wrapped in Arc<Mutex<...>>
+    let subscriber = RabbitMQSubscriber::new("amqp://localhost:5672").await?;
+    let subscriber = Arc::new(tokio::sync::Mutex::new(subscriber));
 
     // Define message handler
-    let handler = Arc::new(|msg: Message| {
+    let handler: HandlerFunc = Arc::new(|msg: Message| {
         Box::pin(async move {
-            // Process the message
-            let mut processed_msg = msg;
-            processed_msg.set_metadata("processed", "true");
+            // Process the message (Message uses a consuming builder API)
+            let processed_msg = msg.with_metadata("processed", "true");
             Ok(vec![processed_msg])
         })
     });
@@ -191,7 +203,7 @@ async fn publish_example<P: Publisher>(publisher: &P) -> Result<(), P::Error> {
 use kincir::Subscriber;
 
 // Subscribe and receive messages
-async fn subscribe_example<S: Subscriber>(subscriber: &S) -> Result<(), S::Error> {
+async fn subscribe_example<S: Subscriber>(subscriber: &mut S) -> Result<(), S::Error> {
     // Subscribe to a topic
     subscriber.subscribe("my-topic").await?;
     
@@ -210,13 +222,13 @@ async fn subscribe_example<S: Subscriber>(subscriber: &S) -> Result<(), S::Error
 Kincir provides Kafka support through the `kafka` module:
 
 ```rust
-use kincir::kafka::{KafkaPublisher, KafkaSubscriber};
+use kincir::kafka::KafkaPublisher;
 
-// Configure Kafka publisher
-let publisher = KafkaPublisher::new("localhost:9092");
+// Kafka takes a list of broker addresses; construction returns a `Result`.
+let publisher = KafkaPublisher::new(vec!["localhost:9092".to_string()])?;
 
-// Configure Kafka subscriber
-let subscriber = KafkaSubscriber::new("localhost:9092", "consumer-group-id");
+// The Kafka subscriber is typically driven by a `Router`; see
+// `examples/kafka-example` for a complete subscriber + router setup.
 ```
 
 ### RabbitMQ
@@ -226,11 +238,9 @@ RabbitMQ support is available through the `rabbitmq` module:
 ```rust
 use kincir::rabbitmq::{RabbitMQPublisher, RabbitMQSubscriber};
 
-// Configure RabbitMQ publisher
-let publisher = RabbitMQPublisher::new("amqp://localhost:5672");
-
-// Configure RabbitMQ subscriber
-let subscriber = RabbitMQSubscriber::new("amqp://localhost:5672", "my-queue");
+// Both constructors are async and return a `Result`.
+let publisher = RabbitMQPublisher::new("amqp://localhost:5672").await?;
+let subscriber = RabbitMQSubscriber::new("amqp://localhost:5672").await?;
 ```
 
 ## Message Structure
@@ -251,9 +261,8 @@ use kincir::Message;
 // Define a message handler
 let handler = |msg: Message| {
     Box::pin(async move {
-        // Process the message
-        let mut processed_msg = msg;
-        processed_msg.set_metadata("processed", "true");
+        // Process the message (metadata is set via the consuming builder)
+        let processed_msg = msg.with_metadata("processed", "true");
         Ok(vec![processed_msg])
     })
 };
