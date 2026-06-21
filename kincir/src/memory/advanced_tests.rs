@@ -80,7 +80,7 @@ mod tests {
         let config = InMemoryConfig::for_testing();
         let broker = Arc::new(InMemoryBroker::new(config));
         let publisher = InMemoryPublisher::new(broker.clone());
-        let mut subscriber = InMemorySubscriber::new(broker.clone());
+        let subscriber = InMemorySubscriber::new(broker.clone());
 
         // Initial health check
         let health = broker.health_check();
@@ -104,7 +104,7 @@ mod tests {
         assert_eq!(health.total_queued_messages, 2);
         assert_eq!(health.total_subscribers, 1);
         assert!(health.memory_usage_estimate > 0);
-        assert!(health.uptime.as_millis() >= 0);
+        let _ = health.uptime.as_millis();
 
         // Test overload detection
         assert!(!health.is_overloaded(10, 10)); // Not overloaded
@@ -134,8 +134,8 @@ mod tests {
         assert_eq!(topic_info.subscriber_count, 1);
         assert_eq!(topic_info.total_published, 2);
         assert_eq!(topic_info.total_consumed, 0);
-        assert!(topic_info.age().as_millis() >= 0); // Changed from > 0 to >= 0
-        assert!(topic_info.idle_time().as_millis() >= 0);
+        assert!(topic_info.age().as_millis() < u128::MAX); // age is measurable
+        let _ = topic_info.idle_time().as_millis();
         assert!(topic_info.is_active());
         assert!(topic_info.throughput_rate() >= 0.0); // Changed from > 0.0 to >= 0.0
         assert!(topic_info.next_sequence > 0);
@@ -204,7 +204,7 @@ mod tests {
         let config = InMemoryConfig::for_testing();
         let broker = Arc::new(InMemoryBroker::new(config));
         let publisher = InMemoryPublisher::new(broker.clone());
-        let mut subscriber = InMemorySubscriber::new(broker.clone());
+        let subscriber = InMemorySubscriber::new(broker.clone());
 
         subscriber.subscribe("shutdown-topic").await.unwrap();
 
@@ -218,7 +218,7 @@ mod tests {
         // Note: We can't test graceful shutdown easily due to Arc<> immutability
         // This would require a different API design for shutdown
         // For now, test force shutdown which works with Arc
-        broker.force_shutdown();
+        let _ = broker.force_shutdown();
 
         // Broker should be shutdown
         assert!(!publisher.is_connected());
@@ -258,8 +258,8 @@ mod tests {
         let config = InMemoryConfig::for_testing();
         let broker = Arc::new(InMemoryBroker::new(config));
         let publisher = InMemoryPublisher::new(broker.clone());
-        let mut subscriber1 = InMemorySubscriber::new(broker.clone());
-        let mut subscriber2 = InMemorySubscriber::new(broker.clone());
+        let subscriber1 = InMemorySubscriber::new(broker.clone());
+        let subscriber2 = InMemorySubscriber::new(broker.clone());
 
         // Create multiple topics with different characteristics
         subscriber1.subscribe("topic1").await.unwrap();

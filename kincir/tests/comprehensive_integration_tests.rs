@@ -12,7 +12,7 @@ use kincir::router::HandlerFunc;
 use kincir::{AckHandle, AckSubscriber, Message, Publisher};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use tokio::time::{sleep, timeout};
+use tokio::time::timeout;
 
 /// Helper function to create test messages with metadata
 fn create_integration_test_messages(count: usize, prefix: &str) -> Vec<Message> {
@@ -341,7 +341,7 @@ mod high_throughput_integration_tests {
         // Create and set up subscribers BEFORE publishing
         let mut subscribers = Vec::new();
         for _sub_id in 0..concurrent_subscribers {
-            let mut subscriber = InMemoryAckSubscriberFixed::new(broker.clone());
+            let subscriber = InMemoryAckSubscriberFixed::new(broker.clone());
             subscriber
                 .subscribe(topic)
                 .await
