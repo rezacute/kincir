@@ -5,7 +5,10 @@
 use crate::{Message, Publisher, Subscriber};
 use async_nats::Client;
 use async_trait::async_trait;
+use futures::StreamExt;
+use std::sync::Arc;
 use thiserror::Error;
+use tokio::sync::Mutex;
 
 #[derive(Error, Debug)]
 pub enum NatsError {
@@ -55,9 +58,14 @@ impl Publisher for NatsPublisher {
 }
 
 /// NATS Subscriber
+///
+/// A subscription is created by [`Subscriber::subscribe`] and consumed
+/// message-by-message via [`Subscriber::receive`]. The active subscription is
+/// held behind a mutex so the `&self` `subscribe` and `&mut self` `receive`
+/// methods can share it.
 pub struct NatsSubscriber {
-    #[allow(dead_code)] // retained to keep the NATS connection alive for the subscriber's lifetime
     client: Client,
+    subscription: Arc<Mutex<Option<async_nats::Subscriber>>>,
 }
 
 impl NatsSubscriber {
@@ -65,8 +73,11 @@ impl NatsSubscriber {
         let client = async_nats::connect(url)
             .await
             .map_err(|e| NatsError::ConnectionError(e.to_string()))?;
-        
-        Ok(Self { client })
+
+        Ok(Self {
+            client,
+            subscription: Arc::new(Mutex::new(None)),
+        })
     }
 }
 
@@ -75,17 +86,33 @@ impl Subscriber for NatsSubscriber {
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
     async fn subscribe(&self, topic: &str) -> Result<(), Self::Error> {
-        // NATS subscription is done per-message in receive
-        let _ = topic;
+        let subscription = self
+            .client
+            .subscribe(topic.to_string())
+            .await
+            .map_err(|e| NatsError::SubscribeError(e.to_string()))?;
+
+        // Replace any previous subscription with the new one.
+        *self.subscription.lock().await = Some(subscription);
         Ok(())
     }
 
     async fn receive(&mut self) -> Result<Message, Self::Error> {
-        // For NATS, we'd need to set up a subscription first
-        // This is a simplified implementation
-        Err(Box::new(NatsError::ReceiveError(
-            "NATS receive not fully implemented - use subscription via client".to_string()
-        )))
+        let mut guard = self.subscription.lock().await;
+        let subscription = guard.as_mut().ok_or_else(|| {
+            NatsError::ReceiveError("not subscribed: call subscribe() first".to_string())
+        })?;
+
+        match subscription.next().await {
+            Some(nats_message) => {
+                let message = Message::new(nats_message.payload.to_vec())
+                    .with_metadata("nats_subject", nats_message.subject.to_string());
+                Ok(message)
+            }
+            None => Err(Box::new(NatsError::ReceiveError(
+                "subscription closed".to_string(),
+            ))),
+        }
     }
 }
 
