@@ -1,3 +1,4 @@
+#![cfg(feature = "broker-integration")]
 //! Integration tests for MQTT acknowledgment handling
 //!
 //! These tests verify the MQTT acknowledgment implementation works correctly

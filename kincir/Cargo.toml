@@ -12,6 +12,11 @@ rust-version = "1.70.0"
 default = ["logging"]
 logging = []
 protobuf = ["prost"]
+# Enables integration tests that require a running message broker
+# (Kafka, MQTT, RabbitMQ). Off by default so the standard test suite does not
+# require external infrastructure. Run with:
+#   cargo test -p kincir --features broker-integration
+broker-integration = []
 
 [dependencies]
 tokio = { version = "1.36", features = ["full"] }

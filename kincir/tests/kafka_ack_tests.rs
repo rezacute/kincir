@@ -1,3 +1,4 @@
+#![cfg(feature = "broker-integration")]
 //! Integration tests for Kafka acknowledgment handling
 //!
 //! These tests verify the Kafka acknowledgment implementation works correctly
