@@ -45,37 +45,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("✅ Acknowledgment subscriber created successfully");
 
     // Example 1: QoS 0 - Fire and forget (no acknowledgment needed)
-    println!("\n" + "=".repeat(60).as_str());
+    println!("\n{}", "=".repeat(60));
     println!("📋 Example 1: QoS 0 - Fire and Forget (No Acknowledgment)");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     
     qos0_example(&publisher, &mut subscriber, &format!("{}/qos0", base_topic)).await?;
 
     // Example 2: QoS 1 - At least once (acknowledgment required)
-    println!("\n" + "=".repeat(60).as_str());
+    println!("\n{}", "=".repeat(60));
     println!("📋 Example 2: QoS 1 - At Least Once (Acknowledgment Required)");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     
     qos1_example(&publisher, &mut subscriber, &format!("{}/qos1", base_topic)).await?;
 
     // Example 3: QoS 2 - Exactly once (acknowledgment required)
-    println!("\n" + "=".repeat(60).as_str());
+    println!("\n{}", "=".repeat(60));
     println!("📋 Example 3: QoS 2 - Exactly Once (Acknowledgment Required)");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     
     qos2_example(&publisher, &mut subscriber, &format!("{}/qos2", base_topic)).await?;
 
     // Example 4: Negative acknowledgment and requeue behavior
-    println!("\n" + "=".repeat(60).as_str());
+    println!("\n{}", "=".repeat(60));
     println!("📋 Example 4: Negative Acknowledgment and Requeue Behavior");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     
     negative_acknowledgment_example(&publisher, &mut subscriber, &format!("{}/nack", base_topic)).await?;
 
     // Example 5: Batch operations
-    println!("\n" + "=".repeat(60).as_str());
+    println!("\n{}", "=".repeat(60));
     println!("📋 Example 5: Batch Acknowledgment Operations");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     
     batch_operations_example(&publisher, &mut subscriber, &format!("{}/batch", base_topic)).await?;
 
@@ -102,7 +102,7 @@ async fn qos0_example(
     
     let message = Message::new(b"Hello from MQTT QoS 0!".to_vec())
         .with_metadata("qos", "0")
-        .with_metadata("timestamp", &chrono::Utc::now().to_rfc3339());
+        .with_metadata("timestamp", chrono::Utc::now().to_rfc3339());
     
     publisher.publish(topic, vec![message.clone()]).await?;
     println!("✅ Message published: {}", String::from_utf8_lossy(&message.payload));
@@ -291,11 +291,9 @@ async fn batch_operations_example(
     // Give time for subscription to be established
     sleep(Duration::from_millis(100)).await;
     
-    let messages = vec![
-        Message::new(b"Batch message 1".to_vec()).with_metadata("batch_id", "1"),
+    let messages = [Message::new(b"Batch message 1".to_vec()).with_metadata("batch_id", "1"),
         Message::new(b"Batch message 2".to_vec()).with_metadata("batch_id", "2"),
-        Message::new(b"Batch message 3".to_vec()).with_metadata("batch_id", "3"),
-    ];
+        Message::new(b"Batch message 3".to_vec()).with_metadata("batch_id", "3")];
     
     // Publish messages individually (MQTT doesn't have native batch publish)
     for (i, message) in messages.iter().enumerate() {
@@ -332,8 +330,5 @@ async fn batch_operations_example(
 }
 
 async fn is_mqtt_available() -> bool {
-    match tokio::net::TcpStream::connect("127.0.0.1:1883").await {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    (tokio::net::TcpStream::connect("127.0.0.1:1883").await).is_ok()
 }

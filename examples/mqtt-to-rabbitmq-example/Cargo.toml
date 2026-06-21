@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-kincir = { path = "../../" } # Adjust path as necessary
+kincir = { path = "../../kincir", features = ["logging"] }
 tokio = { version = "1", features = ["full"] }
 dotenvy = "0.15"
 tracing = "0.1"
