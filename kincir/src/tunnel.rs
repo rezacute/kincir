@@ -5,13 +5,12 @@ use crate::mqtt::MQTTSubscriber;
 use crate::rabbitmq::RabbitMQPublisher;
 use crate::Publisher; // The trait
 use crate::Subscriber; // The trait
-use rumqttc; // Ensure rumqttc is available for QoS enum
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::task::JoinHandle;
 #[cfg(feature = "logging")]
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 // Re-export or define necessary MQTT and Kafka types if not directly accessible
 // For now, assume MqttConfig and KafkaConfig will be defined here.
@@ -31,6 +30,18 @@ impl MqttTunnelConfig {
             broker_url: broker_url.to_string(),
             topics,
             qos,
+        }
+    }
+
+    /// Map the configured QoS byte to an MQTT [`QoS`](crate::mqtt::QoS) value.
+    ///
+    /// `0` maps to `AtMostOnce`, `1` to `AtLeastOnce` and `2` to `ExactlyOnce`.
+    /// Any other value falls back to `AtLeastOnce`.
+    pub fn qos(&self) -> crate::mqtt::QoS {
+        match self.qos {
+            0 => crate::mqtt::QoS::AtMostOnce,
+            2 => crate::mqtt::QoS::ExactlyOnce,
+            _ => crate::mqtt::QoS::AtLeastOnce,
         }
     }
 }
@@ -127,32 +138,21 @@ impl MqttToRabbitMQTunnel {
         for mqtt_topic in &self.mqtt_config.topics {
             let topic_clone = mqtt_topic.clone(); // Clone topic string for the task
             let mqtt_broker_url = self.mqtt_config.broker_url.clone();
-            let qos_u8 = self.mqtt_config.qos;
+            let qos = self.mqtt_config.qos();
 
             let publisher_clone = Arc::clone(&rabbitmq_publisher_arc);
             let rabbitmq_routing_key = self.rabbitmq_config.routing_key.clone();
 
             let task = tokio::spawn(async move {
-                let rumqttc_qos = match qos_u8 {
-                    0 => rumqttc::QoS::AtMostOnce,
-                    1 => rumqttc::QoS::AtLeastOnce,
-                    2 => rumqttc::QoS::ExactlyOnce,
-                    _ => {
-                        #[cfg(feature = "logging")]
-                        warn!("Task for {}: Invalid QoS value {} configured, defaulting to AtLeastOnce.", topic_clone, qos_u8);
-                        rumqttc::QoS::AtLeastOnce
-                    }
-                };
-
                 #[cfg(feature = "logging")]
                 info!(
                     "Task for {}: Initializing MQTT subscriber for broker_url: {}, qos: {:?}",
-                    topic_clone, mqtt_broker_url, rumqttc_qos
+                    topic_clone, mqtt_broker_url, qos
                 );
 
                 // Create MQTT subscriber for this specific topic
                 let mut mqtt_subscriber =
-                    MQTTSubscriber::new(&mqtt_broker_url, &topic_clone, rumqttc_qos).map_err(
+                    MQTTSubscriber::new(&mqtt_broker_url, &topic_clone, qos).map_err(
                         |e| {
                             #[cfg(feature = "logging")]
                             error!(
@@ -311,32 +311,21 @@ impl MqttToKafkaTunnel {
         for mqtt_topic in &self.mqtt_config.topics {
             let topic_clone = mqtt_topic.clone(); // Clone topic string for the task
             let mqtt_broker_url = self.mqtt_config.broker_url.clone();
-            let qos_u8 = self.mqtt_config.qos;
+            let qos = self.mqtt_config.qos();
 
             let kafka_publisher_clone = kafka_publisher.clone(); // Clone FutureProducer
             let kafka_target_topic = self.kafka_config.topic.clone();
 
             let task = tokio::spawn(async move {
-                let rumqttc_qos = match qos_u8 {
-                    0 => rumqttc::QoS::AtMostOnce,
-                    1 => rumqttc::QoS::AtLeastOnce,
-                    2 => rumqttc::QoS::ExactlyOnce,
-                    _ => {
-                        #[cfg(feature = "logging")]
-                        warn!("Task for {}: Invalid QoS value {} configured, defaulting to AtLeastOnce.", topic_clone, qos_u8);
-                        rumqttc::QoS::AtLeastOnce
-                    }
-                };
-
                 #[cfg(feature = "logging")]
                 info!(
                     "Task for {}: Initializing MQTT subscriber for broker_url: {}, qos: {:?}",
-                    topic_clone, mqtt_broker_url, rumqttc_qos
+                    topic_clone, mqtt_broker_url, qos
                 );
 
                 // Create MQTT subscriber for this specific topic
                 let mut mqtt_subscriber =
-                    MQTTSubscriber::new(&mqtt_broker_url, &topic_clone, rumqttc_qos).map_err(
+                    MQTTSubscriber::new(&mqtt_broker_url, &topic_clone, qos).map_err(
                         |e| {
                             #[cfg(feature = "logging")]
                             error!(
@@ -397,10 +386,14 @@ impl MqttToKafkaTunnel {
                                 }
                                 Err(e) => {
                                     #[cfg(feature = "logging")]
-                                    error!("Task for {}: Failed to publish message UUID {} to Kafka: {}. Message might be lost.", topic_clone, kincir_message.uuid, e);
-                                    // Decide on error handling for publish failure. For now, log and continue.
-                                    // To make it more robust, this task could return an error:
-                                    // return Err(TunnelError::KafkaClientError(format!("Task {}: Kafka publish failed: {}", topic_clone, e)));
+                                    error!("Task for {}: Failed to publish message UUID {} to Kafka: {}. Stopping task.", topic_clone, kincir_message.uuid, e);
+                                    // Surface the failure (consistent with the
+                                    // RabbitMQ tunnel) rather than silently
+                                    // dropping messages.
+                                    return Err(TunnelError::KafkaClientError(format!(
+                                        "Task {}: Kafka publish failed: {}",
+                                        topic_clone, e
+                                    )));
                                 }
                             }
                         }
@@ -448,5 +441,97 @@ impl MqttToKafkaTunnel {
         #[cfg(feature = "logging")]
         info!("All MqttToKafkaTunnel tasks completed. Shutting down (or indicates an issue if tasks exited unexpectedly).");
         Ok(())
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mqtt::QoS;
+
+    #[test]
+    fn test_mqtt_tunnel_config_new() {
+        let config = MqttTunnelConfig::new(
+            "mqtt://localhost:1883",
+            vec!["a".to_string(), "b".to_string()],
+            1,
+        );
+        assert_eq!(config.broker_url, "mqtt://localhost:1883");
+        assert_eq!(config.topics, vec!["a".to_string(), "b".to_string()]);
+        assert_eq!(config.qos, 1);
+    }
+
+    #[test]
+    fn test_mqtt_tunnel_config_qos_mapping() {
+        let qos_for = |q: u8| MqttTunnelConfig::new("url", vec!["t".to_string()], q).qos();
+        assert_eq!(qos_for(0), QoS::AtMostOnce);
+        assert_eq!(qos_for(1), QoS::AtLeastOnce);
+        assert_eq!(qos_for(2), QoS::ExactlyOnce);
+        // Out-of-range values fall back to AtLeastOnce
+        assert_eq!(qos_for(3), QoS::AtLeastOnce);
+        assert_eq!(qos_for(255), QoS::AtLeastOnce);
+    }
+
+    #[test]
+    fn test_kafka_tunnel_config_new() {
+        let config = KafkaTunnelConfig::new(
+            vec!["broker1:9092".to_string(), "broker2:9092".to_string()],
+            "events",
+        );
+        assert_eq!(
+            config.broker_urls,
+            vec!["broker1:9092".to_string(), "broker2:9092".to_string()]
+        );
+        assert_eq!(config.topic, "events");
+    }
+
+    #[test]
+    fn test_rabbitmq_tunnel_config_new() {
+        let config = RabbitMQTunnelConfig::new("amqp://localhost:5672", "orders");
+        assert_eq!(config.uri, "amqp://localhost:5672");
+        assert_eq!(config.routing_key, "orders");
+    }
+
+    #[test]
+    fn test_configs_serde_round_trip() {
+        let mqtt = MqttTunnelConfig::new("mqtt://localhost:1883", vec!["sensors".to_string()], 2);
+        let json = serde_json::to_string(&mqtt).unwrap();
+        let back: MqttTunnelConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.broker_url, mqtt.broker_url);
+        assert_eq!(back.topics, mqtt.topics);
+        assert_eq!(back.qos, mqtt.qos);
+
+        let kafka = KafkaTunnelConfig::new(vec!["localhost:9092".to_string()], "events");
+        let json = serde_json::to_string(&kafka).unwrap();
+        let back: KafkaTunnelConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.broker_urls, kafka.broker_urls);
+        assert_eq!(back.topic, kafka.topic);
+
+        let rabbit = RabbitMQTunnelConfig::new("amqp://localhost:5672", "orders");
+        let json = serde_json::to_string(&rabbit).unwrap();
+        let back: RabbitMQTunnelConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.uri, rabbit.uri);
+        assert_eq!(back.routing_key, rabbit.routing_key);
+    }
+
+    #[tokio::test]
+    async fn test_mqtt_to_rabbitmq_tunnel_rejects_empty_topics() {
+        let mqtt = MqttTunnelConfig::new("mqtt://localhost:1883", vec![], 1);
+        let rabbit = RabbitMQTunnelConfig::new("amqp://localhost:5672", "orders");
+        let mut tunnel = MqttToRabbitMQTunnel::new(mqtt, rabbit);
+
+        let result = tunnel.run().await;
+        assert!(matches!(result, Err(TunnelError::ConfigurationError(_))));
+    }
+
+    #[tokio::test]
+    async fn test_mqtt_to_kafka_tunnel_rejects_empty_topics() {
+        let mqtt = MqttTunnelConfig::new("mqtt://localhost:1883", vec![], 1);
+        let kafka = KafkaTunnelConfig::new(vec!["localhost:9092".to_string()], "events");
+        let mut tunnel = MqttToKafkaTunnel::new(mqtt, kafka);
+
+        let result = tunnel.run().await;
+        assert!(matches!(result, Err(TunnelError::ConfigurationError(_))));
     }
 }
