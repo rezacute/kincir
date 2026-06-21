@@ -5,7 +5,6 @@ mod tests {
     use super::super::*;
     use crate::ack::{AckConfig, AckMode, AckSubscriber};
     use crate::memory::{InMemoryAckSubscriber, InMemoryBroker, InMemoryConfig};
-    use crate::{Message, Publisher};
     use std::sync::Arc;
     use std::time::Duration;
 

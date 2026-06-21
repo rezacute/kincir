@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::backend::{BackendBuilder, BackendError, BackendType};
+    use crate::backend::{BackendError, BackendType};
 
     #[test]
     fn test_parse_amqp_scheme() {

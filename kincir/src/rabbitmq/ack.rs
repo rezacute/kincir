@@ -186,6 +186,12 @@ impl RabbitMQAckSubscriber {
     }
 }
 
+impl std::fmt::Debug for RabbitMQAckSubscriber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RabbitMQAckSubscriber").finish_non_exhaustive()
+    }
+}
+
 #[async_trait]
 impl AckSubscriber for RabbitMQAckSubscriber {
     type Error = Box<dyn std::error::Error + Send + Sync>;

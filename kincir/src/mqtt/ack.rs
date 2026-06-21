@@ -100,6 +100,7 @@ pub struct MQTTAckSubscriber {
     /// MQTT client
     client: AsyncClient,
     /// MQTT event loop
+    #[allow(dead_code)] // retained to keep the MQTT connection/session alive
     event_loop: Arc<Mutex<EventLoop>>,
     /// Current subscription state
     state: Mutex<SubscriberState>,
@@ -216,6 +217,7 @@ impl MQTTAckSubscriber {
     }
 
     /// Handle MQTT event loop without logging
+    #[allow(dead_code)] // alternative event-loop driver retained for future wiring
     async fn handle_event_loop(
         event_loop: Arc<Mutex<EventLoop>>,
         message_tx: mpsc::Sender<(Message, MQTTAckHandle)>,
@@ -360,6 +362,12 @@ impl MQTTAckSubscriber {
             .await;
 
         Ok(())
+    }
+}
+
+impl std::fmt::Debug for MQTTAckSubscriber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MQTTAckSubscriber").finish_non_exhaustive()
     }
 }
 

@@ -2,7 +2,6 @@ use super::{InMemoryBroker, InMemoryError};
 use crate::{Message, Publisher};
 use async_trait::async_trait;
 use std::sync::Arc;
-use std::time::Instant;
 
 /// Publisher implementation for the in-memory message broker
 #[derive(Debug, Clone)]
@@ -65,8 +64,6 @@ impl Publisher for InMemoryPublisher {
     /// * `MaxTopicsReached` - If topic limit would be exceeded
     /// * `QueueFull` - If the topic queue is full
     async fn publish(&self, topic: &str, messages: Vec<Message>) -> Result<(), Self::Error> {
-        let start_time = Instant::now();
-
         // Validate input
         if messages.is_empty() {
             return Ok(()); // Nothing to publish

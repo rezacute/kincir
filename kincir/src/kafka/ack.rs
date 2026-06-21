@@ -271,6 +271,15 @@ impl KafkaAckSubscriber {
     }
 }
 
+impl std::fmt::Debug for KafkaAckSubscriber {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KafkaAckSubscriber")
+            .field("group_id", &self.group_id)
+            .field("brokers", &self.brokers)
+            .finish_non_exhaustive()
+    }
+}
+
 #[async_trait]
 impl AckSubscriber for KafkaAckSubscriber {
     type Error = Box<dyn std::error::Error + Send + Sync>;

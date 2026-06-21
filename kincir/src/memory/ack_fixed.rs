@@ -24,6 +24,7 @@ pub struct InMemoryAckHandleFixed {
     /// Delivery attempt count
     delivery_count: u32,
     /// Weak reference to broker for acknowledgment
+    #[allow(dead_code)] // held for parity with InMemoryAckHandle; ack routing uses the subscriber's broker
     broker: Weak<InMemoryBroker>,
     /// Internal handle ID for tracking
     handle_id: String,
