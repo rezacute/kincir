@@ -9,7 +9,7 @@ fn create_test_messages(count: usize, size: usize) -> Vec<Message> {
     (0..count)
         .map(|i| {
             Message::new(payload.clone())
-                .with_metadata("message_id", &i.to_string())
+                .with_metadata("message_id", i.to_string())
                 .with_metadata("benchmark", "memory_broker")
         })
         .collect()
@@ -108,7 +108,7 @@ fn bench_concurrent_operations(c: &mut Criterion) {
 
                         // Create publishers
                         let mut publisher_handles = Vec::new();
-                        for pub_id in 0..pub_count {
+                        for _pub_id in 0..pub_count {
                             let broker_clone = broker.clone();
                             let handle = tokio::spawn(async move {
                                 let publisher = InMemoryPublisher::new(broker_clone);

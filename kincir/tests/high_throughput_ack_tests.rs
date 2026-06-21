@@ -27,9 +27,9 @@ fn create_sequenced_messages(count: usize, prefix: &str, start_seq: usize) -> Ve
         .map(|i| {
             let seq = start_seq + i;
             Message::new(format!("{} message {}", prefix, seq).into_bytes())
-                .with_metadata("sequence", &seq.to_string())
+                .with_metadata("sequence", seq.to_string())
                 .with_metadata("batch_id", prefix)
-                .with_metadata("created_at", &chrono::Utc::now().to_rfc3339())
+                .with_metadata("created_at", chrono::Utc::now().to_rfc3339())
         })
         .collect()
 }
@@ -76,8 +76,8 @@ async fn test_high_volume_single_subscriber() {
             Duration::from_secs(30),
             subscriber.receive_with_ack()
         ).await
-            .expect(&format!("Timeout waiting for message {}", i + 1))
-            .expect(&format!("Failed to receive message {}", i + 1));
+            .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+            .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
 
         // Verify message content
         assert!(String::from_utf8_lossy(&message.payload).contains("HighVolume"));
@@ -85,7 +85,7 @@ async fn test_high_volume_single_subscriber() {
 
         let ack_start = Instant::now();
         subscriber.ack(handle).await
-            .expect(&format!("Failed to acknowledge message {}", i + 1));
+            .unwrap_or_else(|_| panic!("Failed to acknowledge message {}", i + 1));
         let ack_duration = ack_start.elapsed();
 
         ack_times.push(ack_duration);
@@ -174,14 +174,14 @@ async fn test_concurrent_publishers_single_subscriber() {
             Duration::from_secs(30),
             subscriber.receive_with_ack()
         ).await
-            .expect(&format!("Timeout waiting for message {}", i + 1))
-            .expect(&format!("Failed to receive message {}", i + 1));
+            .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+            .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
 
         received_messages.push(message);
 
         let ack_start = Instant::now();
         subscriber.ack(handle).await
-            .expect(&format!("Failed to acknowledge message {}", i + 1));
+            .unwrap_or_else(|_| panic!("Failed to acknowledge message {}", i + 1));
         let ack_duration = ack_start.elapsed();
 
         ack_times.push(ack_duration);
@@ -194,9 +194,10 @@ async fn test_concurrent_publishers_single_subscriber() {
     let receive_duration = receive_start.elapsed();
 
     // Verify all publishers' messages were received
-    let mut publisher_counts = vec![0; CONCURRENT_PUBLISHERS];
+    let mut publisher_counts = [0; CONCURRENT_PUBLISHERS];
     for message in &received_messages {
         let payload = String::from_utf8_lossy(&message.payload);
+        #[allow(clippy::needless_range_loop)]
         for pub_id in 0..CONCURRENT_PUBLISHERS {
             if payload.contains(&format!("Pub{}", pub_id)) {
                 publisher_counts[pub_id] += 1;
@@ -362,7 +363,7 @@ async fn test_batch_acknowledgment_high_throughput() {
         );
         
         publisher.publish("batch_ack", batch_messages).await
-            .expect(&format!("Failed to publish batch {}", batch_id));
+            .unwrap_or_else(|_| panic!("Failed to publish batch {}", batch_id));
     }
 
     let publish_duration = publish_start.elapsed();
@@ -382,8 +383,8 @@ async fn test_batch_acknowledgment_high_throughput() {
                 Duration::from_secs(10),
                 subscriber.receive_with_ack()
             ).await
-                .expect(&format!("Timeout waiting for message {} in batch {}", i, batch_id))
-                .expect(&format!("Failed to receive message {} in batch {}", i, batch_id));
+                .unwrap_or_else(|_| panic!("Timeout waiting for message {} in batch {}", i, batch_id))
+                .unwrap_or_else(|_| panic!("Failed to receive message {} in batch {}", i, batch_id));
 
             // Verify message is from expected batch
             let payload = String::from_utf8_lossy(&message.payload);
@@ -397,7 +398,7 @@ async fn test_batch_acknowledgment_high_throughput() {
         // Batch acknowledge
         let batch_ack_start_time = Instant::now();
         subscriber.ack_batch(batch_handles).await
-            .expect(&format!("Failed to batch acknowledge batch {}", batch_id));
+            .unwrap_or_else(|_| panic!("Failed to batch acknowledge batch {}", batch_id));
         let batch_ack_duration = batch_ack_start_time.elapsed();
 
         total_processed += BATCH_SIZE;
@@ -617,8 +618,8 @@ async fn test_memory_usage_under_high_load() {
             Duration::from_secs(30),
             subscriber.receive_with_ack()
         ).await
-            .expect(&format!("Timeout waiting for message {}", i + 1))
-            .expect(&format!("Failed to receive message {}", i + 1));
+            .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+            .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
 
         handles.push(handle);
 
@@ -666,8 +667,8 @@ fn create_large_messages(count: usize, size_bytes: usize) -> Vec<Message> {
     (0..count)
         .map(|i| {
             Message::new(large_payload.clone())
-                .with_metadata("message_id", &i.to_string())
-                .with_metadata("size", &size_bytes.to_string())
+                .with_metadata("message_id", i.to_string())
+                .with_metadata("size", size_bytes.to_string())
         })
         .collect()
 }

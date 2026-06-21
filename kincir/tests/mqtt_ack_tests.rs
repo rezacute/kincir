@@ -7,16 +7,12 @@
 use kincir::ack::{AckHandle, AckSubscriber};
 use kincir::mqtt::{MQTTAckHandle, MQTTAckSubscriber, MQTTPublisher, QoS};
 use kincir::{Message, Publisher};
-use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::time::timeout;
 
 // Helper function to check if MQTT broker is available
 async fn is_mqtt_available() -> bool {
-    match tokio::net::TcpStream::connect("127.0.0.1:1883").await {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    (tokio::net::TcpStream::connect("127.0.0.1:1883").await).is_ok()
 }
 
 // Skip test if MQTT broker is not available
@@ -358,8 +354,8 @@ async fn test_mqtt_batch_acknowledgment() {
     for i in 0..3 {
         let (received_message, ack_handle) = timeout(Duration::from_secs(10), subscriber.receive_with_ack())
             .await
-            .expect(&format!("Timeout waiting for message {}", i + 1))
-            .expect(&format!("Failed to receive message {}", i + 1));
+            .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+            .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
         
         // Verify message content (order may vary)
         assert!(messages.iter().any(|m| m.payload == received_message.payload));
@@ -413,8 +409,8 @@ async fn test_mqtt_batch_negative_acknowledgment() {
     for i in 0..2 {
         let (received_message, ack_handle) = timeout(Duration::from_secs(10), subscriber.receive_with_ack())
             .await
-            .expect(&format!("Timeout waiting for message {}", i + 1))
-            .expect(&format!("Failed to receive message {}", i + 1));
+            .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+            .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
         
         // Verify message content (order may vary)
         assert!(messages.iter().any(|m| m.payload == received_message.payload));

@@ -7,16 +7,12 @@
 use kincir::ack::{AckHandle, AckSubscriber};
 use kincir::kafka::{KafkaAckHandle, KafkaAckSubscriber, KafkaPublisher};
 use kincir::{Message, Publisher};
-use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::time::timeout;
 
 // Helper function to check if Kafka is available
 async fn is_kafka_available() -> bool {
-    match tokio::net::TcpStream::connect("127.0.0.1:9092").await {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    (tokio::net::TcpStream::connect("127.0.0.1:9092").await).is_ok()
 }
 
 // Skip test if Kafka is not available
@@ -261,11 +257,12 @@ async fn test_kafka_batch_acknowledgment() {
 
     // Receive messages and collect acknowledgment handles
     let mut ack_handles = Vec::new();
+    #[allow(clippy::needless_range_loop)]
     for i in 0..3 {
         let (received_message, ack_handle) = timeout(Duration::from_secs(10), subscriber.receive_with_ack())
             .await
-            .expect(&format!("Timeout waiting for message {}", i + 1))
-            .expect(&format!("Failed to receive message {}", i + 1));
+            .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+            .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
         
         // Verify message content
         assert_eq!(received_message.payload, messages[i].payload);
@@ -309,11 +306,12 @@ async fn test_kafka_batch_negative_acknowledgment() {
 
     // Receive messages and collect acknowledgment handles
     let mut ack_handles = Vec::new();
+    #[allow(clippy::needless_range_loop)]
     for i in 0..2 {
         let (received_message, ack_handle) = timeout(Duration::from_secs(10), subscriber.receive_with_ack())
             .await
-            .expect(&format!("Timeout waiting for message {}", i + 1))
-            .expect(&format!("Failed to receive message {}", i + 1));
+            .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+            .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
         
         // Verify message content
         assert_eq!(received_message.payload, messages[i].payload);

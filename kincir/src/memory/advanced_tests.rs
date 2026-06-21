@@ -180,7 +180,7 @@ mod tests {
         // Both topics should be removed since neither has subscribers
         // and both should be idle after the wait
         assert!(
-            removed.len() >= 1,
+            !removed.is_empty(),
             "Expected at least 1 topic to be removed, got {}",
             removed.len()
         );

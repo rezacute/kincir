@@ -21,11 +21,11 @@ fn create_integration_test_messages(count: usize, prefix: &str) -> Vec<Message> 
             let payload = format!("{} integration message {}", prefix, i).into_bytes();
             let mut msg = Message::new(payload);
             msg = msg.with_metadata("test_type", "integration");
-            msg = msg.with_metadata("sequence", &i.to_string());
+            msg = msg.with_metadata("sequence", i.to_string());
             msg = msg.with_metadata("prefix", prefix);
             msg = msg.with_metadata(
                 "created_at",
-                &SystemTime::now()
+                SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .unwrap()
                     .as_secs()
@@ -45,7 +45,7 @@ fn create_test_handler() -> HandlerFunc {
             processed = processed.with_metadata("processed", "true");
             processed = processed.with_metadata(
                 "processed_at",
-                &SystemTime::now()
+                SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .unwrap()
                     .as_secs()
@@ -90,8 +90,8 @@ mod cross_backend_consistency_tests {
         for i in 0..5 {
             let (received, handle) = timeout(Duration::from_secs(5), subscriber.receive_with_ack())
                 .await
-                .expect(&format!("Timeout waiting for message {}", i + 1))
-                .expect(&format!("Failed to receive message {}", i + 1));
+                .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+                .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
 
             // Verify message properties
             assert_eq!(handle.topic(), topic);
@@ -267,8 +267,8 @@ mod high_throughput_integration_tests {
             let (received, handle) =
                 timeout(Duration::from_secs(30), subscriber.receive_with_ack())
                     .await
-                    .expect(&format!("Timeout waiting for message {}", i + 1))
-                    .expect(&format!("Failed to receive message {}", i + 1));
+                    .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+                    .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
 
             // Verify message integrity
             assert!(String::from_utf8_lossy(&received.payload).contains("HighThroughput"));
@@ -281,7 +281,7 @@ mod high_throughput_integration_tests {
             subscriber
                 .ack(handle)
                 .await
-                .expect(&format!("Failed to acknowledge message {}", i + 1));
+                .unwrap_or_else(|_| panic!("Failed to acknowledge message {}", i + 1));
             let ack_msg_duration = ack_msg_start.elapsed();
 
             ack_times.push(ack_msg_duration);
@@ -492,11 +492,12 @@ mod end_to_end_workflow_tests {
         let mut negative_acks = 0;
         let mut batch_handles = Vec::new();
 
+        #[allow(clippy::needless_range_loop)]
         for i in 0..10 {
             let (received, handle) = timeout(Duration::from_secs(5), subscriber.receive_with_ack())
                 .await
-                .expect(&format!("Timeout waiting for message {}", i + 1))
-                .expect(&format!("Failed to receive message {}", i + 1));
+                .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+                .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
 
             // Verify message integrity
             assert_eq!(received.payload, test_messages[i].payload);
@@ -607,20 +608,17 @@ mod end_to_end_workflow_tests {
         ] {
             let mut processed_count = 0;
 
+            #[allow(clippy::needless_range_loop)]
             for i in 0..3 {
                 let (received, handle) =
                     timeout(Duration::from_secs(5), subscriber.receive_with_ack())
                         .await
-                        .expect(&format!(
-                            "Timeout waiting for message {} from {}",
+                        .unwrap_or_else(|_| panic!("Timeout waiting for message {} from {}",
                             i + 1,
-                            topic
-                        ))
-                        .expect(&format!(
-                            "Failed to receive message {} from {}",
+                            topic))
+                        .unwrap_or_else(|_| panic!("Failed to receive message {} from {}",
                             i + 1,
-                            topic
-                        ));
+                            topic));
 
                 // Verify message belongs to correct topic
                 assert_eq!(handle.topic(), topic);
@@ -630,7 +628,7 @@ mod end_to_end_workflow_tests {
                 subscriber
                     .ack(handle)
                     .await
-                    .expect(&format!("Failed to acknowledge message from {}", topic));
+                    .unwrap_or_else(|_| panic!("Failed to acknowledge message from {}", topic));
                 processed_count += 1;
             }
 
@@ -733,8 +731,8 @@ mod performance_validation_tests {
 
             let (received, handle) = timeout(Duration::from_secs(5), subscriber.receive_with_ack())
                 .await
-                .expect(&format!("Timeout waiting for message {}", i + 1))
-                .expect(&format!("Failed to receive message {}", i + 1));
+                .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+                .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
 
             let receive_latency = start.elapsed();
 
@@ -808,7 +806,7 @@ mod performance_validation_tests {
             .map(|i| {
                 let payload = vec![0u8; message_size];
                 let mut msg = Message::new(payload);
-                msg = msg.with_metadata("sequence", &i.to_string());
+                msg = msg.with_metadata("sequence", i.to_string());
                 msg = msg.with_metadata("test_type", "memory_test");
                 msg
             })
@@ -846,8 +844,8 @@ mod performance_validation_tests {
             let (received, handle) =
                 timeout(Duration::from_secs(10), subscriber.receive_with_ack())
                     .await
-                    .expect(&format!("Timeout waiting for message {}", i + 1))
-                    .expect(&format!("Failed to receive message {}", i + 1));
+                    .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+                    .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
 
             // Verify message
             assert_eq!(received.payload.len(), message_size);

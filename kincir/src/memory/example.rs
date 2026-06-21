@@ -149,7 +149,7 @@ mod integration_tests {
         for i in 0..message_count {
             messages.push(
                 Message::new(format!("Message #{}", i).into_bytes())
-                    .with_metadata("sequence", &i.to_string()),
+                    .with_metadata("sequence", i.to_string()),
             );
         }
 

@@ -10,7 +10,7 @@ fn create_ack_test_messages(count: usize, size: usize) -> Vec<Message> {
     (0..count)
         .map(|i| {
             Message::new(payload.clone())
-                .with_metadata("ack_id", &i.to_string())
+                .with_metadata("ack_id", i.to_string())
                 .with_metadata("benchmark", "acknowledgment")
         })
         .collect()

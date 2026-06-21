@@ -17,7 +17,7 @@ mod working_tests {
             .with_metadata("test", "true")
             .with_metadata(
                 "created_at",
-                &std::time::SystemTime::now()
+                std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
                     .as_secs()
@@ -379,7 +379,7 @@ mod working_tests {
             subscriber
                 .subscribe(topic)
                 .await
-                .expect(&format!("Failed to subscribe to {}", topic));
+                .unwrap_or_else(|_| panic!("Failed to subscribe to {}", topic));
         }
 
         // Verify subscription state
@@ -403,7 +403,7 @@ mod working_tests {
             publisher
                 .publish(topic, topic_messages)
                 .await
-                .expect(&format!("Failed to publish to {}", topic));
+                .unwrap_or_else(|_| panic!("Failed to publish to {}", topic));
             total_expected += messages_per_topic;
         }
 
