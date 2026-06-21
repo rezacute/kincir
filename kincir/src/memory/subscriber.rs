@@ -263,7 +263,7 @@ mod tests {
     #[tokio::test]
     async fn test_basic_subscribe() {
         let broker = Arc::new(InMemoryBroker::new(InMemoryConfig::for_testing()));
-        let mut subscriber = InMemorySubscriber::new(broker.clone());
+        let subscriber = InMemorySubscriber::new(broker.clone());
 
         let result = subscriber.subscribe("test-topic").await;
         assert!(result.is_ok());
@@ -360,7 +360,7 @@ mod tests {
     async fn test_try_receive() {
         let broker = Arc::new(InMemoryBroker::new(InMemoryConfig::for_testing()));
         let publisher = InMemoryPublisher::new(broker.clone());
-        let mut subscriber = InMemorySubscriber::new(broker.clone());
+        let subscriber = InMemorySubscriber::new(broker.clone());
 
         subscriber.subscribe("test-topic").await.unwrap();
 
@@ -388,7 +388,7 @@ mod tests {
     async fn test_try_receive_batch() {
         let broker = Arc::new(InMemoryBroker::new(InMemoryConfig::for_testing()));
         let publisher = InMemoryPublisher::new(broker.clone());
-        let mut subscriber = InMemorySubscriber::new(broker.clone());
+        let subscriber = InMemorySubscriber::new(broker.clone());
 
         subscriber.subscribe("test-topic").await.unwrap();
 
@@ -418,7 +418,7 @@ mod tests {
     #[tokio::test]
     async fn test_resubscribe() {
         let broker = Arc::new(InMemoryBroker::new(InMemoryConfig::for_testing()));
-        let mut subscriber = InMemorySubscriber::new(broker.clone());
+        let subscriber = InMemorySubscriber::new(broker.clone());
 
         // Subscribe to first topic
         subscriber.subscribe("topic1").await.unwrap();
@@ -434,7 +434,7 @@ mod tests {
     #[tokio::test]
     async fn test_unsubscribe() {
         let broker = Arc::new(InMemoryBroker::new(InMemoryConfig::for_testing()));
-        let mut subscriber = InMemorySubscriber::new(broker.clone());
+        let subscriber = InMemorySubscriber::new(broker.clone());
 
         subscriber.subscribe("test-topic").await.unwrap();
         assert!(subscriber.is_subscribed());
@@ -456,7 +456,7 @@ mod tests {
     #[tokio::test]
     async fn test_subscribe_invalid_topic_name() {
         let broker = Arc::new(InMemoryBroker::new(InMemoryConfig::for_testing()));
-        let mut subscriber = InMemorySubscriber::new(broker);
+        let subscriber = InMemorySubscriber::new(broker);
 
         // Empty topic name
         let result = subscriber.subscribe("").await;
@@ -476,7 +476,7 @@ mod tests {
     #[tokio::test]
     async fn test_subscribe_after_shutdown() {
         let broker = Arc::new(InMemoryBroker::new(InMemoryConfig::for_testing()));
-        let mut subscriber = InMemorySubscriber::new(broker.clone());
+        let subscriber = InMemorySubscriber::new(broker.clone());
 
         // Shutdown broker
         broker.shutdown().unwrap();

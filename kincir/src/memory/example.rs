@@ -139,7 +139,7 @@ mod integration_tests {
         let broker = Arc::new(InMemoryBroker::new(config));
 
         let publisher = InMemoryPublisher::new(broker.clone());
-        let mut subscriber = InMemorySubscriber::new(broker.clone());
+        let subscriber = InMemorySubscriber::new(broker.clone());
 
         subscriber.subscribe("high-volume").await.unwrap();
 
@@ -190,7 +190,7 @@ mod integration_tests {
         let broker = Arc::new(InMemoryBroker::new(config));
 
         let publisher = InMemoryPublisher::new(broker.clone());
-        let mut subscriber = InMemorySubscriber::new(broker.clone());
+        let subscriber = InMemorySubscriber::new(broker.clone());
 
         // Test topic limit
         subscriber.subscribe("topic1").await.unwrap();
