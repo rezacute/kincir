@@ -6,7 +6,8 @@
 //!
 //! Run with: cargo run --example router_ack_example
 
-use kincir::ack::{AckHandle, AckSubscriber};
+use kincir::ack::AckSubscriber;
+use kincir::adapter::PublisherExt;
 use kincir::memory::{InMemoryAckSubscriber, InMemoryBroker, InMemoryPublisher};
 use kincir::router::{AckRouter, AckStrategy, RouterAckConfig};
 use kincir::{Message, Publisher};
@@ -24,37 +25,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let broker = Arc::new(InMemoryBroker::with_default_config());
     
     // Example 1: Basic acknowledgment-aware routing
-    println!("\n" + "=".repeat(60).as_str());
+    println!("\n{}", "=".repeat(60));
     println!("📋 Example 1: Basic Acknowledgment-Aware Routing");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     
     basic_ack_routing_example(broker.clone()).await?;
 
     // Example 2: Error handling and retry logic
-    println!("\n" + "=".repeat(60).as_str());
+    println!("\n{}", "=".repeat(60));
     println!("📋 Example 2: Error Handling and Retry Logic");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     
     error_handling_example(broker.clone()).await?;
 
     // Example 3: Different acknowledgment strategies
-    println!("\n" + "=".repeat(60).as_str());
+    println!("\n{}", "=".repeat(60));
     println!("📋 Example 3: Different Acknowledgment Strategies");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     
     acknowledgment_strategies_example(broker.clone()).await?;
 
     // Example 4: Processing timeout handling
-    println!("\n" + "=".repeat(60).as_str());
+    println!("\n{}", "=".repeat(60));
     println!("📋 Example 4: Processing Timeout Handling");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     
     timeout_handling_example(broker.clone()).await?;
 
     // Example 5: Statistics and monitoring
-    println!("\n" + "=".repeat(60).as_str());
+    println!("\n{}", "=".repeat(60));
     println!("📋 Example 5: Statistics and Monitoring");
-    println!("=".repeat(60));
+    println!("{}", "=".repeat(60));
     
     statistics_example(broker.clone()).await?;
 
@@ -71,13 +72,13 @@ async fn basic_ack_routing_example(
     println!("📤 Setting up basic acknowledgment-aware router...");
 
     // Create components
-    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
+    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
     let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
     let output_subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
 
     // Create a simple message processing handler
-    let handler = Arc::new(|msg: Message| {
+    let handler: kincir::router::HandlerFunc = Arc::new(|msg: Message| {
         Box::pin(async move {
             println!("  🔄 Processing message: {}", String::from_utf8_lossy(&msg.payload));
             
@@ -85,7 +86,7 @@ async fn basic_ack_routing_example(
             let processed_payload = format!("PROCESSED: {}", String::from_utf8_lossy(&msg.payload));
             let processed_msg = Message::new(processed_payload.into_bytes())
                 .with_metadata("processed", "true")
-                .with_metadata("processed_at", &chrono::Utc::now().to_rfc3339())
+                .with_metadata("processed_at", chrono::Utc::now().to_rfc3339())
                 .with_metadata("original_id", &msg.uuid);
             
             Ok(vec![processed_msg])
@@ -118,16 +119,14 @@ async fn basic_ack_routing_example(
 
     // Subscribe to output topic to see processed messages
     {
-        let mut output_sub = output_subscriber.lock().await;
+        let output_sub = output_subscriber.lock().await;
         output_sub.subscribe("output").await?;
     }
 
     // Publish test messages
-    let test_messages = vec![
-        Message::new(b"Hello Router!".to_vec()).with_metadata("priority", "high"),
+    let test_messages = [Message::new(b"Hello Router!".to_vec()).with_metadata("priority", "high"),
         Message::new(b"Message 2".to_vec()).with_metadata("priority", "normal"),
-        Message::new(b"Message 3".to_vec()).with_metadata("priority", "low"),
-    ];
+        Message::new(b"Message 3".to_vec()).with_metadata("priority", "low")];
 
     for (i, message) in test_messages.iter().enumerate() {
         input_publisher.publish("input", vec![message.clone()]).await?;
@@ -174,12 +173,12 @@ async fn error_handling_example(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("📤 Setting up error handling example...");
 
-    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
+    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
     let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
 
     // Handler that fails for messages containing "fail"
-    let handler = Arc::new(|msg: Message| {
+    let handler: kincir::router::HandlerFunc = Arc::new(|msg: Message| {
         Box::pin(async move {
             let payload_str = String::from_utf8_lossy(&msg.payload);
             println!("  🔄 Processing message: {}", payload_str);
@@ -232,12 +231,10 @@ async fn error_handling_example(
     );
 
     // Test messages - some will succeed, some will fail
-    let test_messages = vec![
-        Message::new(b"Success message 1".to_vec()),
+    let test_messages = [Message::new(b"Success message 1".to_vec()),
         Message::new(b"This will fail".to_vec()),
         Message::new(b"Success message 2".to_vec()),
-        Message::new(b"Another fail message".to_vec()),
-    ];
+        Message::new(b"Another fail message".to_vec())];
 
     for (i, message) in test_messages.iter().enumerate() {
         input_publisher.publish("input", vec![message.clone()]).await?;
@@ -282,12 +279,12 @@ async fn acknowledgment_strategies_example(
     for (strategy, strategy_name) in strategies {
         println!("\n🔧 Testing strategy: {}", strategy_name);
 
-        let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-        let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+        let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
+        let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
         let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
 
         // Handler that always fails for this test
-        let handler = Arc::new(|_msg: Message| {
+        let handler: kincir::router::HandlerFunc = Arc::new(|_msg: Message| {
             Box::pin(async move {
                 Err(Box::new(std::io::Error::new(
                     std::io::ErrorKind::Other,
@@ -376,12 +373,12 @@ async fn timeout_handling_example(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("📤 Setting up timeout handling example...");
 
-    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
+    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
     let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
 
     // Handler that takes longer than the timeout
-    let handler = Arc::new(|msg: Message| {
+    let handler: kincir::router::HandlerFunc = Arc::new(|msg: Message| {
         Box::pin(async move {
             let payload_str = String::from_utf8_lossy(&msg.payload);
             println!("  🔄 Starting slow processing: {}", payload_str);
@@ -458,12 +455,12 @@ async fn statistics_example(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("📤 Setting up comprehensive statistics example...");
 
-    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
+    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
     let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
 
     // Handler with variable processing times
-    let handler = Arc::new(|msg: Message| {
+    let handler: kincir::router::HandlerFunc = Arc::new(|msg: Message| {
         Box::pin(async move {
             let payload_str = String::from_utf8_lossy(&msg.payload);
             
@@ -514,16 +511,14 @@ async fn statistics_example(
     );
 
     // Publish various test messages
-    let test_messages = vec![
-        Message::new(b"fast message 1".to_vec()),
+    let test_messages = [Message::new(b"fast message 1".to_vec()),
         Message::new(b"normal message 1".to_vec()),
         Message::new(b"slow message 1".to_vec()),
         Message::new(b"fast message 2".to_vec()),
         Message::new(b"fail message 1".to_vec()),
         Message::new(b"normal message 2".to_vec()),
         Message::new(b"fail message 2".to_vec()),
-        Message::new(b"slow message 2".to_vec()),
-    ];
+        Message::new(b"slow message 2".to_vec())];
 
     for (i, message) in test_messages.iter().enumerate() {
         input_publisher.publish("input", vec![message.clone()]).await?;

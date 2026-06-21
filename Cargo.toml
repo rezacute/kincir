@@ -7,6 +7,7 @@ members = [
     "examples/protobuf-example",
     "examples/mqtt-example",
     "examples/mqtt-to-kafka-example",
+    "examples/mqtt-to-rabbitmq-example",
     "examples/in-memory-example",
     "examples/ack-example"
 ]

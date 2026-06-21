@@ -3,7 +3,7 @@
 //! This example shows how to use the new acknowledgment functionality to ensure
 //! reliable message processing with manual acknowledgment control.
 
-use kincir::ack::{AckConfig, AckMode, AckSubscriber};
+use kincir::ack::{AckConfig, AckHandle, AckSubscriber};
 use kincir::memory::{InMemoryBroker, InMemoryConfig, InMemoryPublisher, InMemoryAckSubscriber};
 use kincir::{Publisher, Message};
 use std::sync::Arc;
@@ -55,8 +55,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let (message, ack_handle) = ack_subscriber.receive_with_ack().await?;
         
         let order_text = String::from_utf8_lossy(&message.payload);
-        let customer = message.metadata.get("customer").unwrap_or(&"Unknown".to_string());
-        let priority = message.metadata.get("priority").unwrap_or(&"normal".to_string());
+        let customer = message
+            .metadata
+            .get("customer")
+            .map(|s| s.as_str())
+            .unwrap_or("Unknown");
+        let priority = message
+            .metadata
+            .get("priority")
+            .map(|s| s.as_str())
+            .unwrap_or("normal");
         
         println!("📨 Received: {}", order_text);
         println!("   Customer: {}, Priority: {}", customer, priority);
@@ -117,10 +125,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Show broker statistics
     if let Some(stats) = publisher.stats() {
         println!("\n📊 Broker Statistics:");
-        println!("   Messages Published: {}", stats.messages_published());
-        println!("   Messages Consumed: {}", stats.messages_consumed());
-        println!("   Active Topics: {}", stats.active_topics());
-        println!("   Uptime: {:?}", stats.uptime());
+        println!("   Messages Published: {}", stats.messages_published);
+        println!("   Messages Consumed: {}", stats.messages_consumed);
+        println!("   Active Topics: {}", stats.active_topics);
+        println!("   Uptime: {:?}", stats.uptime);
     }
     
     // Show broker health
@@ -170,7 +178,7 @@ async fn demonstrate_error_handling() -> Result<(), Box<dyn std::error::Error>> 
     println!("\n🚨 Error Handling Examples:");
     
     let broker = Arc::new(InMemoryBroker::new(InMemoryConfig::for_testing()));
-    let subscriber = InMemoryAckSubscriber::new(broker.clone());
+    let mut subscriber = InMemoryAckSubscriber::new(broker.clone());
     
     // Try to receive without subscribing
     match subscriber.receive_with_ack().await {
