@@ -5,12 +5,12 @@
 //! unified acknowledgment interface works correctly with different implementations.
 
 use kincir::ack::{AckHandle, AckSubscriber};
-use kincir::memory::{InMemoryAckHandle, InMemoryAckSubscriber, InMemoryBroker, InMemoryPublisher};
+use kincir::memory::{InMemoryAckSubscriber, InMemoryBroker, InMemoryPublisher};
 use kincir::{Message, Publisher};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use tokio::time::{sleep, timeout};
+use tokio::time::timeout;
 
 // Helper function to create a test message with metadata
 fn create_test_message(content: &str, metadata: HashMap<String, String>) -> Message {
@@ -251,14 +251,12 @@ async fn test_concurrent_acknowledgment_operations() {
     let handle1 = tokio::spawn(async move {
         let mut ack_count = 0;
         for _ in 0..5 {
-            if let Ok((_, handle)) = timeout(
+            if let Ok(Ok((_, handle))) = timeout(
                 Duration::from_secs(5),
                 subscriber1.receive_with_ack()
             ).await {
-                if let Ok(_) = handle {
-                    if let Ok(_) = subscriber1.ack(handle.unwrap()).await {
-                        ack_count += 1;
-                    }
+                if subscriber1.ack(handle).await.is_ok() {
+                    ack_count += 1;
                 }
             }
         }
@@ -268,14 +266,12 @@ async fn test_concurrent_acknowledgment_operations() {
     let handle2 = tokio::spawn(async move {
         let mut ack_count = 0;
         for _ in 0..5 {
-            if let Ok((_, handle)) = timeout(
+            if let Ok(Ok((_, handle))) = timeout(
                 Duration::from_secs(5),
                 subscriber2.receive_with_ack()
             ).await {
-                if let Ok(_) = handle {
-                    if let Ok(_) = subscriber2.ack(handle.unwrap()).await {
-                        ack_count += 1;
-                    }
+                if subscriber2.ack(handle).await.is_ok() {
+                    ack_count += 1;
                 }
             }
         }
@@ -287,7 +283,7 @@ async fn test_concurrent_acknowledgment_operations() {
         .expect("Concurrent tasks should complete successfully");
 
     // Verify that messages were processed (exact distribution may vary)
-    assert!(count1.unwrap() + count2.unwrap() > 0, "At least some messages should be acknowledged");
+    assert!(count1 + count2 > 0, "At least some messages should be acknowledged");
 }
 
 #[tokio::test]
@@ -355,7 +351,7 @@ async fn test_acknowledgment_metadata_preservation() {
         .expect("Failed to subscribe");
 
     // Create message with rich metadata
-    let metadata = [
+    let metadata: HashMap<String, String> = [
         ("correlation_id".to_string(), "test-correlation-123".to_string()),
         ("message_type".to_string(), "test_message".to_string()),
         ("priority".to_string(), "high".to_string()),
@@ -396,33 +392,33 @@ async fn test_acknowledgment_metadata_preservation() {
 
 #[tokio::test]
 async fn test_subscription_state_consistency() {
-    // Test that subscription state is consistent across operations
+    // Test that subscription state is consistent across operations.
+    // The in-memory ack subscriber tracks a single active topic; subscribing
+    // again replaces the previous subscription.
     let broker = Arc::new(InMemoryBroker::with_default_config());
-    let mut subscriber = InMemoryAckSubscriber::new(broker.clone());
+    let subscriber = InMemoryAckSubscriber::new(broker.clone());
 
     // Initially not subscribed
     assert!(!subscriber.is_subscribed().await);
-    assert!(subscriber.subscribed_topics().await.is_empty());
+    assert!(subscriber.subscribed_topic().await.is_none());
 
-    // Subscribe to multiple topics
+    // Subscribing to each topic updates the tracked subscription
     let topics = vec!["topic1", "topic2", "topic3"];
     for topic in &topics {
-        subscriber.subscribe(topic).await
-            .expect(&format!("Failed to subscribe to {}", topic));
+        subscriber
+            .subscribe(topic)
+            .await
+            .unwrap_or_else(|_| panic!("Failed to subscribe to {}", topic));
+
+        assert!(subscriber.is_subscribed().await);
+        assert_eq!(subscriber.subscribed_topic().await.as_deref(), Some(*topic));
     }
 
-    // Verify subscription state
-    assert!(subscriber.is_subscribed().await);
-    let subscribed_topics = subscriber.subscribed_topics().await;
-    assert_eq!(subscribed_topics.len(), topics.len());
-    
-    for topic in &topics {
-        assert!(
-            subscribed_topics.contains(&topic.to_string()),
-            "Topic '{}' not found in subscribed topics",
-            topic
-        );
-    }
+    // The most recent subscription wins
+    assert_eq!(
+        subscriber.subscribed_topic().await.as_deref(),
+        Some("topic3")
+    );
 }
 
 // Helper test for backend-specific behavior validation

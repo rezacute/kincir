@@ -472,6 +472,54 @@ where
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         let delivery_count = ack_handle.delivery_count();
         let message_id = ack_handle.message_id().to_string();
+        let _ = error_message; // only used when the `logging` feature is enabled
+
+        // The acknowledgment strategy determines what happens to a message whose
+        // handler failed.
+        match self.config.strategy {
+            // Acknowledge the message even though processing failed.
+            AckStrategy::AlwaysAck => {
+                let subscriber = self.subscriber.lock().await;
+                subscriber.ack(ack_handle).await.map_err(|e| e.into())?;
+
+                #[cfg(feature = "logging")]
+                self.logger
+                    .info(&format!(
+                        "Message acknowledged despite processing failure: {} - {}",
+                        message_id, error_message
+                    ))
+                    .await;
+
+                let mut stats = self.stats.lock().await;
+                stats.messages_acked += 1;
+                return Ok(());
+            }
+            // The handler is responsible for acknowledgment; do nothing here.
+            AckStrategy::Manual => {
+                #[cfg(feature = "logging")]
+                self.logger
+                    .info(&format!(
+                        "Manual acknowledgment mode - handler is responsible for failed message: {}",
+                        message_id
+                    ))
+                    .await;
+                return Ok(());
+            }
+            // Never acknowledge (and never negatively acknowledge) the message.
+            AckStrategy::NeverAck => {
+                #[cfg(feature = "logging")]
+                self.logger
+                    .info(&format!(
+                        "Never acknowledge mode - failed message left unacknowledged: {} - {}",
+                        message_id, error_message
+                    ))
+                    .await;
+                return Ok(());
+            }
+            // Default: negatively acknowledge, requeueing when retries remain.
+            AckStrategy::AutoAckOnSuccess => {}
+        }
+
         let should_retry = delivery_count <= self.config.max_retries;
 
         if should_retry && self.config.requeue_on_failure {
@@ -497,21 +545,22 @@ where
                 .await
                 .map_err(|e| e.into())?;
 
-            #[cfg(feature = "logging")]
             if delivery_count > self.config.max_retries {
+                // Update max retries statistics (independent of the logging feature)
+                {
+                    let mut stats = self.stats.lock().await;
+                    stats.messages_max_retries_exceeded += 1;
+                }
+
+                #[cfg(feature = "logging")]
                 self.logger
                     .error(&format!(
                         "Max retries exceeded - message discarded: {} (attempts: {})",
                         message_id, delivery_count
                     ))
                     .await;
-
-                // Update max retries statistics
-                {
-                    let mut stats = self.stats.lock().await;
-                    stats.messages_max_retries_exceeded += 1;
-                }
             } else {
+                #[cfg(feature = "logging")]
                 self.logger
                     .info(&format!(
                         "Message negatively acknowledged without requeue: {} - {}",

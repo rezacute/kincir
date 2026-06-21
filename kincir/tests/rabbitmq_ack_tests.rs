@@ -1,3 +1,4 @@
+#![cfg(feature = "broker-integration")]
 //! Integration tests for RabbitMQ acknowledgment handling
 //!
 //! These tests verify the RabbitMQ acknowledgment implementation works correctly

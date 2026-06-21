@@ -158,6 +158,7 @@ pub trait Subscriber {
 }
 
 pub mod ack;
+pub mod adapter;
 pub mod backend;
 pub mod kafka;
 pub mod memory;
@@ -176,6 +177,7 @@ pub mod protobuf;
 
 // Re-export commonly used types
 pub use ack::{AckConfig, AckHandle, AckMode, AckStats, AckSubscriber, CompatSubscriber};
+pub use adapter::{BoxedPublisher, BoxedSubscriber, PublisherExt, SubscriberExt};
 
 #[cfg(feature = "logging")]
 pub use logging::{Logger, NoOpLogger, StdLogger};

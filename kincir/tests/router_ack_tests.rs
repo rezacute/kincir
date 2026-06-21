@@ -3,8 +3,9 @@
 //! These tests verify the acknowledgment-aware router implementation works correctly
 //! with different acknowledgment strategies, error handling, and statistics tracking.
 
-use kincir::ack::{AckHandle, AckSubscriber};
-use kincir::memory::{InMemoryAckHandle, InMemoryAckSubscriber, InMemoryBroker, InMemoryPublisher};
+use kincir::ack::AckSubscriber;
+use kincir::adapter::PublisherExt;
+use kincir::memory::{InMemoryAckSubscriber, InMemoryBroker, InMemoryPublisher};
 use kincir::router::{AckRouter, AckStrategy, RouterAckConfig, RouterAckStats};
 use kincir::{Message, Publisher};
 use std::sync::Arc;
@@ -95,8 +96,14 @@ async fn test_router_ack_stats_calculations() {
 #[tokio::test]
 async fn test_ack_router_creation_with_default_config() {
     let broker = Arc::new(InMemoryBroker::with_default_config());
-    let publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+    let publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
     let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
+    subscriber
+        .lock()
+        .await
+        .subscribe("input")
+        .await
+        .expect("Failed to subscribe router to input topic");
     let handler = create_success_handler();
 
     #[cfg(feature = "logging")]
@@ -135,8 +142,14 @@ async fn test_ack_router_creation_with_default_config() {
 #[tokio::test]
 async fn test_ack_router_with_custom_config() {
     let broker = Arc::new(InMemoryBroker::with_default_config());
-    let publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+    let publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
     let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
+    subscriber
+        .lock()
+        .await
+        .subscribe("input")
+        .await
+        .expect("Failed to subscribe router to input topic");
     let handler = create_success_handler();
 
     let config = RouterAckConfig {
@@ -186,9 +199,15 @@ async fn test_ack_router_with_custom_config() {
 #[tokio::test]
 async fn test_ack_router_successful_processing() {
     let broker = Arc::new(InMemoryBroker::with_default_config());
-    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
+    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
     let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
+    subscriber
+        .lock()
+        .await
+        .subscribe("input")
+        .await
+        .expect("Failed to subscribe router to input topic");
     let handler = create_success_handler();
 
     let config = RouterAckConfig {
@@ -243,9 +262,15 @@ async fn test_ack_router_successful_processing() {
 #[tokio::test]
 async fn test_ack_router_processing_failure() {
     let broker = Arc::new(InMemoryBroker::with_default_config());
-    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
+    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
     let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
+    subscriber
+        .lock()
+        .await
+        .subscribe("input")
+        .await
+        .expect("Failed to subscribe router to input topic");
     let handler = create_failure_handler();
 
     let config = RouterAckConfig {
@@ -302,9 +327,15 @@ async fn test_ack_router_processing_failure() {
 #[tokio::test]
 async fn test_ack_router_conditional_processing() {
     let broker = Arc::new(InMemoryBroker::with_default_config());
-    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
+    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
     let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
+    subscriber
+        .lock()
+        .await
+        .subscribe("input")
+        .await
+        .expect("Failed to subscribe router to input topic");
     let handler = create_conditional_handler();
 
     let config = RouterAckConfig {
@@ -370,9 +401,15 @@ async fn test_ack_router_conditional_processing() {
 #[tokio::test]
 async fn test_ack_router_always_ack_strategy() {
     let broker = Arc::new(InMemoryBroker::with_default_config());
-    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
+    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
     let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
+    subscriber
+        .lock()
+        .await
+        .subscribe("input")
+        .await
+        .expect("Failed to subscribe router to input topic");
     let handler = create_failure_handler(); // Always fails
 
     let config = RouterAckConfig {
@@ -425,9 +462,15 @@ async fn test_ack_router_always_ack_strategy() {
 #[tokio::test]
 async fn test_ack_router_never_ack_strategy() {
     let broker = Arc::new(InMemoryBroker::with_default_config());
-    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
+    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
     let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
+    subscriber
+        .lock()
+        .await
+        .subscribe("input")
+        .await
+        .expect("Failed to subscribe router to input topic");
     let handler = create_success_handler(); // Always succeeds
 
     let config = RouterAckConfig {
@@ -481,12 +524,18 @@ async fn test_ack_router_never_ack_strategy() {
 #[tokio::test]
 async fn test_ack_router_processing_timeout() {
     let broker = Arc::new(InMemoryBroker::with_default_config());
-    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
+    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
     let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
+    subscriber
+        .lock()
+        .await
+        .subscribe("input")
+        .await
+        .expect("Failed to subscribe router to input topic");
     
     // Handler that takes longer than the timeout
-    let handler = Arc::new(|msg: Message| {
+    let handler: kincir::router::HandlerFunc = Arc::new(|msg: Message| {
         Box::pin(async move {
             sleep(Duration::from_millis(200)).await; // Longer than timeout
             Ok(vec![msg])
@@ -545,9 +594,15 @@ async fn test_ack_router_processing_timeout() {
 #[tokio::test]
 async fn test_ack_router_stats_reset() {
     let broker = Arc::new(InMemoryBroker::with_default_config());
-    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
-    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()));
+    let input_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
+    let output_publisher = Arc::new(InMemoryPublisher::new(broker.clone()).boxed());
     let subscriber = Arc::new(Mutex::new(InMemoryAckSubscriber::new(broker.clone())));
+    subscriber
+        .lock()
+        .await
+        .subscribe("input")
+        .await
+        .expect("Failed to subscribe router to input topic");
     let handler = create_success_handler();
 
     #[cfg(feature = "logging")]
