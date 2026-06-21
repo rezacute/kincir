@@ -20,7 +20,7 @@ fn create_router_messages(count: usize, size: usize) -> Vec<Message> {
     (0..count)
         .map(|i| {
             Message::new(payload.clone())
-                .with_metadata("router_id", &i.to_string())
+                .with_metadata("router_id", i.to_string())
                 .with_metadata("benchmark", "router")
         })
         .collect()
@@ -37,7 +37,7 @@ fn create_processing_handler() -> HandlerFunc {
         Box::pin(async move {
             let processed = msg.with_metadata("processed", "true").with_metadata(
                 "processed_at",
-                &std::time::SystemTime::now()
+                std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
                     .as_millis()

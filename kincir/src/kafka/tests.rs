@@ -606,7 +606,7 @@ mod kafka_performance_unit_tests {
                     "test-topic".to_string(),
                     SystemTime::now(),
                     1,
-                    (i % 10) as i32, // 10 partitions
+                    i % 10, // 10 partitions
                     i as i64,
                 )
             })
@@ -636,7 +636,7 @@ mod kafka_performance_unit_tests {
         assert_eq!(partition_offsets.len(), 10); // 10 partitions
         for i in 0..10 {
             let expected_max = ((999 / 10) * 10 + i) as i64; // Highest offset for partition i
-            assert!(partition_offsets.get(&(i as i32)).unwrap() >= &expected_max);
+            assert!(partition_offsets.get(&{ i }).unwrap() >= &expected_max);
         }
     }
 }

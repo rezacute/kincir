@@ -95,7 +95,7 @@ mod tests {
         let publisher = InMemoryPublisher::new(broker.clone());
 
         assert!(publisher.is_connected());
-        assert_eq!(Arc::ptr_eq(&publisher.broker, &broker), true);
+        assert!(Arc::ptr_eq(&publisher.broker, &broker));
     }
 
     #[tokio::test]

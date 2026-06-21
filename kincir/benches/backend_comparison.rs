@@ -50,10 +50,10 @@ fn create_test_messages(count: usize, size: usize) -> Vec<Message> {
         .map(|i| {
             let payload = vec![0u8; size];
             let mut msg = Message::new(payload);
-            msg = msg.with_metadata("benchmark_id", &i.to_string());
+            msg = msg.with_metadata("benchmark_id", i.to_string());
             msg = msg.with_metadata(
                 "timestamp",
-                &std::time::SystemTime::now()
+                std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
                     .as_nanos()

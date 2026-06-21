@@ -307,11 +307,9 @@ mod rabbitmq_integration_unit_tests {
     fn test_batch_acknowledgment_logic() {
         // Test the logic for batch acknowledgment with RabbitMQ delivery tags
         let now = SystemTime::now();
-        let handles = vec![
-            RabbitMQAckHandle::new("msg1".to_string(), "queue".to_string(), now, 1, 100),
+        let handles = [RabbitMQAckHandle::new("msg1".to_string(), "queue".to_string(), now, 1, 100),
             RabbitMQAckHandle::new("msg2".to_string(), "queue".to_string(), now, 1, 101),
-            RabbitMQAckHandle::new("msg3".to_string(), "queue".to_string(), now, 1, 102),
-        ];
+            RabbitMQAckHandle::new("msg3".to_string(), "queue".to_string(), now, 1, 102)];
 
         // Find the highest delivery tag for batch acknowledgment
         let max_delivery_tag = handles.iter().map(|h| h.delivery_tag()).max().unwrap_or(0);

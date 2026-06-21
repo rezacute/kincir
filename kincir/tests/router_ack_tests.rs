@@ -17,7 +17,7 @@ use tokio::time::{sleep, timeout};
 fn create_test_message(content: &str) -> Message {
     Message::new(content.as_bytes().to_vec())
         .with_metadata("test", "true")
-        .with_metadata("timestamp", &chrono::Utc::now().to_rfc3339())
+        .with_metadata("timestamp", chrono::Utc::now().to_rfc3339())
 }
 
 // Helper function to create a test handler that always succeeds

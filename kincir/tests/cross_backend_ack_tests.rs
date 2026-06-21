@@ -112,8 +112,8 @@ async fn test_batch_acknowledgment_consistency() {
             Duration::from_secs(5),
             subscriber.receive_with_ack()
         ).await
-            .expect(&format!("Timeout waiting for message {}", i + 1))
-            .expect(&format!("Failed to receive message {}", i + 1));
+            .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+            .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
 
         received_messages.push(message);
         ack_handles.push(handle);
@@ -497,12 +497,12 @@ async fn test_acknowledgment_performance_consistency() {
             Duration::from_secs(10),
             subscriber.receive_with_ack()
         ).await
-            .expect(&format!("Timeout waiting for message {}", i + 1))
-            .expect(&format!("Failed to receive message {}", i + 1));
+            .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+            .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
 
         let ack_start = std::time::Instant::now();
         subscriber.ack(handle).await
-            .expect(&format!("Failed to acknowledge message {}", i + 1));
+            .unwrap_or_else(|_| panic!("Failed to acknowledge message {}", i + 1));
         let ack_duration = ack_start.elapsed();
 
         ack_times.push(ack_duration);

@@ -1,6 +1,7 @@
 //! Unit tests for the backend module
 
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use crate::backend::{BackendError, BackendType};
 

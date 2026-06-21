@@ -257,7 +257,7 @@ mod tests {
         assert!(subscriber.is_connected());
         assert!(!subscriber.is_subscribed());
         assert_eq!(subscriber.subscribed_topic(), None);
-        assert_eq!(Arc::ptr_eq(&subscriber.broker, &broker), true);
+        assert!(Arc::ptr_eq(&subscriber.broker, &broker));
     }
 
     #[tokio::test]

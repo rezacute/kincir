@@ -8,7 +8,7 @@ fn create_concurrent_messages(count: usize, prefix: &str) -> Vec<Message> {
     (0..count)
         .map(|i| {
             Message::new(format!("{} message {}", prefix, i).into_bytes())
-                .with_metadata("message_id", &i.to_string())
+                .with_metadata("message_id", i.to_string())
                 .with_metadata("benchmark", "concurrent")
         })
         .collect()

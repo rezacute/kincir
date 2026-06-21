@@ -694,7 +694,7 @@ mod mqtt_performance_unit_tests {
 
     #[test]
     fn test_qos_determination_performance() {
-        let qos_levels = vec![QoS::AtMostOnce, QoS::AtLeastOnce, QoS::ExactlyOnce];
+        let qos_levels = [QoS::AtMostOnce, QoS::AtLeastOnce, QoS::ExactlyOnce];
 
         let start = std::time::Instant::now();
         let iterations = 10000;

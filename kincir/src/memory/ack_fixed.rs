@@ -362,8 +362,8 @@ mod tests {
         for i in 0..3 {
             let (received, handle) = timeout(Duration::from_secs(2), subscriber.receive_with_ack())
                 .await
-                .expect(&format!("Timeout waiting for message {}", i + 1))
-                .expect(&format!("Failed to receive message {}", i + 1));
+                .unwrap_or_else(|_| panic!("Timeout waiting for message {}", i + 1))
+                .unwrap_or_else(|_| panic!("Failed to receive message {}", i + 1));
 
             assert!(String::from_utf8_lossy(&received.payload).contains("Batch message"));
             handles.push(handle);
